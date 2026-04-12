@@ -13,6 +13,8 @@ import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/product.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import reviewRoutes from './routes/review.routes.js';
+import couponRoutes from './routes/coupon.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,6 +76,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/coupons', couponRoutes);
 
 // ── ERROR HANDLING ────────────────────────────────────────────────
 app.use(notFound);

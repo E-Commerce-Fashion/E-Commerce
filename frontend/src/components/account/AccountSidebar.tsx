@@ -1,63 +1,95 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { UserCircle2, PackageSearch, Heart, CreditCard } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import {
+  UserCircle2,
+  PackageSearch,
+  Heart,
+  CreditCard,
+  ShoppingBag,
+  Users,
+  BarChart3,
+  Settings,
+  Package,
+  LogOut,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useUserStore } from '@/store/userStore'
+import api from '@/lib/axios'
 
-const links = [
+const userLinks = [
+  { href: '/profile',  label: 'Account Overview', icon: UserCircle2  },
+  { href: '/orders',   label: 'My Orders',         icon: PackageSearch },
+  { href: '/wishlist', label: 'Wishlist',           icon: Heart        },
+  { href: '/checkout', label: 'Checkout',           icon: CreditCard   },
+]
+
+const adminLinks = [
   { href: '/profile', label: 'Account Overview', icon: UserCircle2 },
-  { href: '/orders', label: 'Order Details', icon: PackageSearch },
-  { href: '/wishlist', label: 'Wishlist', icon: Heart },
-  { href: '/checkout', label: 'Checkout', icon: CreditCard },
+  { href: '/profile/products', label: 'Products', icon: Package },
+  { href: '/profile/orders', label: 'Orders', icon: ShoppingBag },
+  { href: '/profile/customers', label: 'Customers', icon: Users },
+  { href: '/profile/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/profile/settings', label: 'Settings', icon: Settings },
 ]
 
 export function AccountSidebar() {
+  const router = useRouter()
   const pathname = usePathname()
+  const { user, isAuthenticated, clearUser } = useUserStore()
+  const links = isAuthenticated && user?.role === 'admin' ? adminLinks : userLinks
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // Proceed with local cleanup even if API logout fails.
+    } finally {
+      clearUser()
+      router.push('/login')
+      router.refresh()
+    }
+  }
 
   return (
-    <aside className="lg:sticky lg:top-30">
-      <div
-        className="rounded-2xl border p-4"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
-      >
-        <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--accent-gold)' }}>
-          User Account
-        </p>
-        <h2 className="mt-2 text-xl font-bold font-serif" style={{ color: 'var(--text-primary)' }}>
-          Dashboard
-        </h2>
-
-        <nav className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar lg:flex-col">
+    <aside className="sm:sticky sm:top-28">
+      <div className="account-card rounded-2xl border border-white/5 bg-[#0a0c18] p-4">
+        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-0.5">Navigation</p>
+        <h2 className="text-lg font-bold text-white mb-4">{user?.role === 'admin' ? 'Admin Dashboard' : 'My Account'}</h2>
+        <nav className="flex flex-col gap-2 overflow-visible pb-0">
           {links.map((link) => {
-            const Icon = link.icon
-            const active = pathname === link.href
-
+            const Icon   = link.icon
+            const active = link.href === '/profile'
+              ? pathname === link.href
+              : pathname === link.href || pathname.startsWith(`${link.href}/`)
             return (
               <Link
-                key={link.href}
+                key={`${link.href}-${link.label}`}
                 href={link.href}
-                className="relative inline-flex min-w-fit items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-250"
-                style={{
-                  background: active ? 'rgba(var(--accent-gold-rgb), 0.14)' : 'var(--bg-elevated)',
-                  color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  border: `1px solid ${active ? 'rgba(var(--accent-gold-rgb), 0.45)' : 'var(--border)'}`,
-                }}
-              >
-                <Icon size={16} style={{ color: active ? 'var(--accent-gold)' : 'var(--text-muted)' }} />
-                <span>{link.label}</span>
-                {active && (
-                  <motion.span
-                    layoutId="account-sidebar-active"
-                    className="absolute inset-0 rounded-xl pointer-events-none"
-                    style={{ boxShadow: 'inset 0 0 0 1px rgba(var(--accent-gold-rgb), 0.22)' }}
-                    transition={{ duration: 0.2 }}
-                  />
+                className={cn(
+                  'inline-flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 border',
+                  active
+                    ? 'bg-violet-600/10 text-violet-400 border-violet-500/20'
+                    : 'text-slate-400 border-transparent hover:text-white hover:bg-white/5'
                 )}
+              >
+                <Icon size={16} className={active ? 'text-violet-400' : 'text-slate-500'} />
+                <span>{link.label}</span>
               </Link>
             )
           })}
         </nav>
+
+        {isAuthenticated && (
+          <button
+            onClick={handleLogout}
+            className="mt-3 w-full inline-flex items-center justify-center gap-2.5 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3.5 py-2.5 text-sm font-medium text-rose-400 hover:bg-rose-500/14 transition-colors"
+          >
+            <LogOut size={16} />
+            <span>Logout</span>
+          </button>
+        )}
       </div>
     </aside>
   )

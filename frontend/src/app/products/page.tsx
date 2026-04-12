@@ -1,40 +1,52 @@
 'use client'
 
 import { Suspense, useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import { SlidersHorizontal, X, ChevronDown, Grid3X3, LayoutList, Search } from 'lucide-react'
-import { ProductCard, type Product } from '@/components/product/ProductCard'
+import { motion } from 'framer-motion'
+import { SlidersHorizontal, ChevronDown, Heart } from 'lucide-react'
+import { type Product } from '@/components/product/ProductCard'
 import api from '@/lib/axios'
+import { useCartStore } from '@/store/cartStore'
+import { formatCurrency } from '@/utils'
+import { toast } from 'react-hot-toast'
+import Image from 'next/image'
 
 const categories = ['all', 'shirts', 'pants', 'dresses', 'jackets', 'accessories']
 const sortOptions = [
-  { label: 'Newest',        value: 'created_at:desc' },
+  { label: 'Newest', value: 'created_at:desc' },
   { label: 'Price: Low → High', value: 'price:asc' },
   { label: 'Price: High → Low', value: 'price:desc' },
-  { label: 'Top Rated',     value: 'avg_rating:desc' },
+  { label: 'Top Rated', value: 'avg_rating:desc' },
 ]
-const sizeOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+const filterRows = ['Status', 'Price', 'Collections', 'Chains', 'Categories', 'On Sale In']
 
 export default function ProductsPage() {
   return (
     <Suspense
       fallback={
-        <main className="page-with-navbar-offset pb-20 px-3 sm:px-6 lg:px-8 min-h-screen w-full" style={{ background: 'var(--bg-base)' }}>
-          <div className="w-full space-y-4">
-            <div className="h-10 w-56 skeleton rounded-2xl" />
-            <div className="h-16 skeleton rounded-2xl" />
-            <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                  <div className="aspect-3/4 skeleton" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-3 w-16 skeleton rounded" />
-                    <div className="h-4 w-3/4 skeleton rounded" />
-                    <div className="h-4 w-1/2 skeleton rounded" />
-                  </div>
+        <main className="page-with-navbar-offset min-h-screen px-3 sm:px-6 lg:px-8 pb-16 bg-linear-to-br from-[#5f3a45] via-[#2a284f] to-[#161b42]">
+          <div className="mx-auto max-w-7xl pt-2 sm:pt-3">
+            <div className="flex flex-col lg:flex-row gap-5">
+              <div className="lg:w-64 shrink-0">
+                <div className="h-130 rounded-xl border border-white/10 bg-white/6 skeleton" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="h-11 rounded-xl border border-white/10 bg-white/6 skeleton mb-4" />
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="rounded-xl border border-white/10 bg-[#222954]/75 overflow-hidden">
+                      <div className="aspect-4/5 skeleton bg-[#2d3568]/70" />
+                      <div className="p-3 space-y-2.5">
+                        <div className="h-2.5 w-24 skeleton rounded-full" />
+                        <div className="h-4.5 w-2/3 skeleton rounded" />
+                        <div className="h-3 w-16 skeleton rounded" />
+                        <div className="h-8 rounded-lg skeleton" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </main>
@@ -46,6 +58,7 @@ export default function ProductsPage() {
 }
 
 function ProductsPageContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const initialCategory = searchParams.get('category') || 'all'
 
@@ -55,15 +68,16 @@ function ProductsPageContent() {
   const [hasMore, setHasMore] = useState(true)
   const [totalCount, setTotalCount] = useState(0)
 
-  // Filters
   const [category, setCategory] = useState(initialCategory)
   const [sortBy, setSortBy] = useState('created_at:desc')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([])
+  const [inStockOnly, setInStockOnly] = useState(false)
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000])
   const [filterOpen, setFilterOpen] = useState(false)
-  const [sortOpen, setSortOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [wishlisted, setWishlisted] = useState<Record<string, boolean>>({})
+
+  const addItem = useCartStore((s) => s.addItem)
+  const openCart = useCartStore((s) => s.openCart)
 
   const fetchProducts = useCallback(async (pageNum = 1, append = false) => {
     try {
@@ -71,13 +85,13 @@ function ProductsPageContent() {
       const [sort, order] = sortBy.split(':')
       const params: Record<string, string | number> = {
         page: pageNum,
-        limit: 12,
+        limit: 9,
         sort,
         order,
       }
+
       if (category !== 'all') params.category = category
       if (searchQuery) params.search = searchQuery
-      if (selectedSizes.length) params.sizes = selectedSizes.join(',')
       if (priceRange[0] > 0) params.minPrice = priceRange[0]
       if (priceRange[1] < 10000) params.maxPrice = priceRange[1]
 
@@ -94,7 +108,7 @@ function ProductsPageContent() {
     } finally {
       setLoading(false)
     }
-  }, [category, sortBy, searchQuery, selectedSizes, priceRange])
+  }, [category, sortBy, searchQuery, priceRange])
 
   useEffect(() => {
     setPage(1)
@@ -102,307 +116,224 @@ function ProductsPageContent() {
   }, [fetchProducts])
 
   const loadMore = () => {
-    const next = page + 1
-    setPage(next)
-    fetchProducts(next, true)
+    const nextPage = page + 1
+    setPage(nextPage)
+    fetchProducts(nextPage, true)
   }
 
-  const toggleSize = (size: string) => {
-    setSelectedSizes((prev) =>
-      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
-    )
-  }
+  const filteredProducts = inStockOnly
+    ? products.filter((p) => (p.sizes || []).some((s) => Number(s.stock) > 0))
+    : products
 
-  const clearFilters = () => {
-    setCategory('all')
-    setSelectedSizes([])
-    setPriceRange([0, 10000])
-    setSearchQuery('')
-    setSortBy('created_at:desc')
-  }
+  const activeSortLabel = sortOptions.find((s) => s.value === sortBy)?.label || 'Newest'
 
-  const activeFilterCount = [
-    category !== 'all' ? 1 : 0,
-    selectedSizes.length > 0 ? 1 : 0,
-    priceRange[0] > 0 || priceRange[1] < 10000 ? 1 : 0,
-  ].reduce((a, b) => a + b, 0)
+  const handleBuyNow = (product: Product) => {
+    const primary = (product.sizes || []).find((s) => Number(s.stock) > 0)
+    if (!primary) {
+      toast.error('Out of stock')
+      return
+    }
+    addItem({
+      product_id: product.id,
+      name: product.name,
+      price: product.discount_price || product.price,
+      size: String(primary.size || 'Free'),
+      qty: 1,
+      image: product.images?.[0]?.url || '/placeholder-product.svg',
+      stock: Number(primary.stock || 1),
+    })
+    openCart()
+    toast.success('Added to cart')
+  }
 
   return (
-    <>
-      <main className="page-with-navbar-offset pb-20 px-3 sm:px-6 lg:px-8 min-h-screen w-full" style={{ background: 'var(--bg-base)' }}>
-        <div className="w-full">
-
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"
-          >
-            <h1 className="text-3xl sm:text-4xl font-bold font-serif" style={{ color: 'var(--text-primary)' }}>
-              {category !== 'all' ? <span className="capitalize">{category}</span> : 'All Collections'}
-            </h1>
-            <p className="text-sm sm:text-base" style={{ color: 'var(--text-muted)' }}>
-              {totalCount} products {category !== 'all' && `in ${category}`}
-            </p>
-          </motion.div>
-
-          {/* Toolbar */}
-          <div
-            className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 mb-6 p-3 sm:p-5 rounded-2xl"
-            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-          >
-            {/* Search */}
-            <div
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl w-full sm:flex-1 min-w-0 sm:min-w-50 max-w-none sm:max-w-2xl"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+    <main className="page-with-navbar-offset min-h-screen px-3 sm:px-6 lg:px-8 pb-16 bg-linear-to-br from-[#5f3a45] via-[#2a284f] to-[#161b42]">
+      <div className="mx-auto max-w-7xl pt-2 sm:pt-3">
+        <div className="flex flex-col lg:flex-row gap-5">
+          <aside className="lg:w-64 shrink-0">
+            <button
+              onClick={() => setFilterOpen((prev) => !prev)}
+              className="lg:hidden mb-3 inline-flex items-center gap-2 rounded-lg border border-white/12 bg-white/8 px-3 py-2 text-sm text-white/85"
             >
-              <Search size={16} style={{ color: 'var(--text-muted)' }} />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent outline-none text-sm flex-1"
-                style={{ color: 'var(--text-primary)' }}
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')}>
-                  <X size={14} style={{ color: 'var(--text-muted)' }} />
-                </button>
-              )}
-            </div>
+              <SlidersHorizontal size={16} />
+              Filters
+            </button>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-              {/* Filter toggle */}
-              <button
-                onClick={() => setFilterOpen(!filterOpen)}
-                className="relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
-                style={{
-                  background: filterOpen ? 'rgba(var(--accent-gold-rgb), 0.1)' : 'var(--bg-elevated)',
-                  border: `1px solid ${filterOpen ? 'var(--accent-gold)' : 'var(--border)'}`,
-                  color: filterOpen ? 'var(--accent-gold)' : 'var(--text-secondary)',
-                }}
-              >
-                <SlidersHorizontal size={14} />
-                Filters
-                {activeFilterCount > 0 && (
-                  <span
-                    className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
-                    style={{ background: 'var(--accent-gold)', color: '#0A0A0F' }}
+            <div className={`${filterOpen ? 'block' : 'hidden'} lg:block rounded-xl border border-white/10 bg-white/7 backdrop-blur-md p-4`}>
+              <div className="flex items-center gap-2 text-white mb-4">
+                <SlidersHorizontal size={16} />
+                <p className="text-xl font-semibold">Filters</p>
+              </div>
+
+              <div className="space-y-1 mb-4">
+                {filterRows.map((row) => (
+                  <button
+                    key={row}
+                    className="w-full flex items-center justify-between rounded-lg px-2.5 py-2.5 text-left text-white/90 text-sm hover:bg-white/6 transition-colors"
                   >
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Sort dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setSortOpen(!sortOpen)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
-                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-                >
-                  Sort
-                  <ChevronDown size={14} className={`transition-transform ${sortOpen ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence>
-                  {sortOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      className="absolute right-0 top-full mt-2 w-48 rounded-xl shadow-lg overflow-hidden z-20"
-                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-                    >
-                      {sortOptions.map((opt) => (
-                        <button
-                          key={opt.value}
-                          onClick={() => { setSortBy(opt.value); setSortOpen(false) }}
-                          className="block w-full text-left px-4 py-2.5 text-sm transition-colors"
-                          style={{
-                            color: sortBy === opt.value ? 'var(--accent-gold)' : 'var(--text-secondary)',
-                            background: sortBy === opt.value ? 'rgba(var(--accent-gold-rgb), 0.05)' : 'transparent',
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* View mode */}
-              <div className="hidden sm:flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className="p-2 transition-colors"
-                  style={{
-                    background: viewMode === 'grid' ? 'var(--accent-gold)' : 'var(--bg-elevated)',
-                    color: viewMode === 'grid' ? '#0A0A0F' : 'var(--text-muted)',
-                  }}
-                >
-                  <Grid3X3 size={14} />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className="p-2 transition-colors"
-                  style={{
-                    background: viewMode === 'list' ? 'var(--accent-gold)' : 'var(--bg-elevated)',
-                    color: viewMode === 'list' ? '#0A0A0F' : 'var(--text-muted)',
-                  }}
-                >
-                  <LayoutList size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Filter panel */}
-          <AnimatePresence>
-            {filterOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="overflow-hidden mb-6"
-              >
-                <div
-                  className="p-6 rounded-2xl space-y-6"
-                  style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-                >
-                  {/* Categories */}
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Category</p>
-                    <div className="flex flex-wrap gap-2">
-                      {categories.map((cat) => (
-                        <button
-                          key={cat}
-                          onClick={() => setCategory(cat)}
-                          className="px-4 py-1.5 rounded-full text-sm capitalize transition-all duration-200"
-                          style={{
-                            background: category === cat ? 'var(--accent-gold)' : 'var(--bg-elevated)',
-                            color: category === cat ? '#0A0A0F' : 'var(--text-secondary)',
-                            border: `1px solid ${category === cat ? 'var(--accent-gold)' : 'var(--border)'}`,
-                          }}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sizes */}
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Size</p>
-                    <div className="flex flex-wrap gap-2">
-                      {sizeOptions.map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => toggleSize(size)}
-                          className="w-10 h-10 rounded-xl text-xs font-semibold flex items-center justify-center transition-all duration-200"
-                          style={{
-                            background: selectedSizes.includes(size) ? 'var(--accent-gold)' : 'var(--bg-elevated)',
-                            color: selectedSizes.includes(size) ? '#0A0A0F' : 'var(--text-secondary)',
-                            border: `1px solid ${selectedSizes.includes(size) ? 'var(--accent-gold)' : 'var(--border)'}`,
-                          }}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Price Range */}
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
-                      Price Range: ₹{priceRange[0]} — ₹{priceRange[1]}
-                    </p>
-                    <input
-                      type="range"
-                      min={0}
-                      max={10000}
-                      step={100}
-                      value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                      className="w-full accent-(--accent-gold)"
-                    />
-                  </div>
-
-                  {/* Clear button */}
-                  {activeFilterCount > 0 && (
-                    <button
-                      onClick={clearFilters}
-                      className="text-sm font-medium transition-colors"
-                      style={{ color: 'var(--accent-rose)' }}
-                    >
-                      Clear all filters
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Product Grid */}
-          {loading && products.length === 0 ? (
-            <div
-              className={`grid gap-5 ${viewMode === 'grid' ? 'grid-cols-[repeat(auto-fill,minmax(240px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(280px,1fr))]' : 'grid-cols-1'}`}
-            >
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                  <div className="aspect-3/4 skeleton" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-3 w-16 skeleton rounded" />
-                    <div className="h-4 w-3/4 skeleton rounded" />
-                    <div className="h-4 w-1/2 skeleton rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-20 text-center"
-            >
-              <p className="text-4xl mb-4">🔍</p>
-              <p className="text-lg font-semibold font-serif" style={{ color: 'var(--text-primary)' }}>No products found</p>
-              <p className="mt-2" style={{ color: 'var(--text-muted)' }}>Try adjusting your filters or search query.</p>
-              <button
-                onClick={clearFilters}
-                className="mt-4 px-6 py-2 rounded-xl text-sm font-semibold"
-                style={{ background: 'var(--accent-gold)', color: '#0A0A0F' }}
-              >
-                Clear Filters
-              </button>
-            </motion.div>
-          ) : (
-            <>
-              <div className={`grid gap-5 ${viewMode === 'grid' ? 'grid-cols-[repeat(auto-fill,minmax(240px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(280px,1fr))]' : 'grid-cols-1 md:grid-cols-2'}`}>
-                {products.map((product, i) => (
-                  <ProductCard key={product.id} product={product} index={i} />
+                    <span>{row}</span>
+                    <ChevronDown size={14} className="opacity-70" />
+                  </button>
                 ))}
               </div>
 
-              {hasMore && (
-                <div className="flex justify-center mt-10">
-                  <button
-                    onClick={loadMore}
-                    disabled={loading}
-                    className="px-8 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-                    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                  >
-                    {loading ? 'Loading...' : 'Load More Products'}
-                  </button>
+              <div className="space-y-3 border-t border-white/10 pt-4">
+                <label className="flex items-center gap-2 text-sm text-white/90">
+                  <input
+                    type="checkbox"
+                    checked={inStockOnly}
+                    onChange={(e) => setInStockOnly(e.target.checked)}
+                    className="accent-violet-500"
+                  />
+                  In stock only
+                </label>
+
+                <div>
+                  <p className="text-xs text-white/70 mb-2">Max Price: ₹{priceRange[1]}</p>
+                  <input
+                    type="range"
+                    min={500}
+                    max={10000}
+                    step={100}
+                    value={priceRange[1]}
+                    onChange={(e) => setPriceRange([0, Number(e.target.value)])}
+                    className="w-full accent-violet-500"
+                  />
                 </div>
-              )}
-            </>
-          )}
+              </div>
+            </div>
+          </aside>
+
+          <section className="flex-1 min-w-0">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-white/75 text-sm">{totalCount.toLocaleString()} items</p>
+
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="appearance-none rounded-md border border-white/18 bg-[#1d244a]/70 px-3 py-2 pr-8 text-sm text-white outline-none"
+                  >
+                    {categories.map((c) => (
+                      <option key={c} value={c} className="bg-[#111735] text-white capitalize">{c === 'all' ? 'All Items' : c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70" />
+                </div>
+
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="appearance-none rounded-md border border-white/18 bg-[#1d244a]/70 px-3 py-2 pr-8 text-sm text-white outline-none"
+                  >
+                    {sortOptions.map((s) => (
+                      <option key={s.value} value={s.value} className="bg-[#111735] text-white">{s.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70" />
+                </div>
+              </div>
+            </div>
+
+            {loading && products.length === 0 ? (
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border border-white/10 bg-[#222954]/75 overflow-hidden">
+                    <div className="aspect-4/5 skeleton bg-[#2d3568]/70" />
+                    <div className="p-3 space-y-2.5">
+                      <div className="h-2.5 w-24 skeleton rounded-full" />
+                      <div className="h-4.5 w-2/3 skeleton rounded" />
+                      <div className="h-3 w-16 skeleton rounded" />
+                      <div className="h-8 rounded-lg skeleton" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="rounded-xl border border-white/12 bg-[#1d244a]/60 p-10 text-center text-white/80">
+                No products match the selected filters.
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+                  {filteredProducts.map((product) => {
+                    const price = product.discount_price || product.price
+                    const img = product.images?.[0]?.url || '/placeholder-product.svg'
+                    return (
+                      <motion.article
+                        key={product.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35 }}
+                        className="rounded-xl border border-white/10 bg-[#222954]/80 p-2.5"
+                      >
+                        <button
+                          onClick={() => router.push(`/products/${product.id}`)}
+                          className="w-full text-left"
+                        >
+                          <div className="relative aspect-4/5 overflow-hidden rounded-md bg-[#1a1f3f]">
+                            <Image
+                              src={img}
+                              alt={product.name}
+                              fill
+                              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                              className="object-cover"
+                            />
+                          </div>
+                        </button>
+
+                        <div className="mt-2.5 px-1">
+                          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-white/45">
+                            <span>{String(product.category || 'Collection').slice(0, 18)}</span>
+                            <span>{String(product.id).slice(0, 8)}</span>
+                          </div>
+                          <p className="mt-1 text-sm font-semibold text-white line-clamp-1">{product.name}</p>
+                          <p className="mt-1 text-sm font-bold text-white">{formatCurrency(price)}</p>
+
+                          <div className="mt-2.5 flex items-center gap-2">
+                            <button
+                              onClick={() => setWishlisted((prev) => ({ ...prev, [product.id]: !prev[product.id] }))}
+                              className="w-8 h-8 rounded-full border border-white/15 bg-[#1a1f3f] flex items-center justify-center text-white/85"
+                              aria-label="Wishlist"
+                            >
+                              <Heart
+                                size={14}
+                                fill={wishlisted[product.id] ? '#ef4444' : 'none'}
+                                color={wishlisted[product.id] ? '#ef4444' : 'currentColor'}
+                              />
+                            </button>
+
+                            <button
+                              onClick={() => handleBuyNow(product)}
+                              className="flex-1 h-8 rounded-md bg-linear-to-r from-violet-600 to-fuchsia-500 text-white text-xs font-semibold"
+                            >
+                              Buy Now
+                            </button>
+                          </div>
+                        </div>
+                      </motion.article>
+                    )
+                  })}
+                </div>
+
+                {hasMore && (
+                  <div className="mt-6 flex justify-center">
+                    <button
+                      onClick={loadMore}
+                      disabled={loading}
+                      className="rounded-md border border-white/20 bg-white/10 px-6 py-2 text-sm font-medium text-white hover:bg-white/15 transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Loading...' : `Load More (${activeSortLabel})`}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
         </div>
-      </main>
-    </>
+      </div>
+    </main>
   )
 }

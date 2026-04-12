@@ -53,13 +53,34 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Create Razorpay order
+    // Calculate Discount
+    let discount = 0;
+    if (couponCode) {
+      const { data: coupon } = await supabaseAdmin
+        .from('coupons')
+        .select('*')
+        .eq('code', couponCode.toUpperCase())
+        .eq('is_active', true)
+        .single();
+      
+      if (coupon) {
+        discount = coupon.discount_type === 'percentage'
+          ? Math.round(totalAmount * (Number(coupon.discount_value) / 100))
+          : Number(coupon.discount_value);
+      } else if (couponCode.toUpperCase() === 'FIRST10') {
+         // Fallback for demo
+         discount = Math.round(totalAmount * 0.10);
+      }
+    }
+
+    const finalAmount = Math.max(0, totalAmount - discount);
+
     const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(totalAmount * 100), // paise
+      amount: Math.round(finalAmount * 100), // paise
       currency: 'INR',
       receipt: `receipt_${Date.now()}`,
       payment_capture: 1,
-      notes: { userId: req.user.id },
+      notes: { userId: req.user.id, couponCode: couponCode || '' },
     });
 
     // Create pending order in Supabase
@@ -69,7 +90,7 @@ export const createOrder = async (req, res) => {
         user_id: req.user.id,
         items: validatedItems,
         shipping_address: shippingAddress,
-        total_amount: totalAmount,
+        total_amount: finalAmount,
         razorpay_order_id: razorpayOrder.id,
         payment_status: 'pending',
         order_status: 'placed',

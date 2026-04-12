@@ -27,20 +27,31 @@ export const getDashboardStats = async (req, res) => {
 
     const totalRevenue = revenueData?.reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
 
-    // Recent 7 days revenue per day
-    const { data: recentOrders } = await supabaseAdmin
+    // Recent 5 orders with profile details
+    const { data: detailedRecentOrders } = await supabaseAdmin
       .from('orders')
-      .select('total_amount, created_at')
-      .eq('payment_status', 'paid')
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-      .order('created_at', { ascending: true });
+      .select('id, total_amount, order_status, created_at, profiles(name)')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Low stock products (less than 5 units in any size)
+    const { data: allProducts } = await supabaseAdmin
+      .from('products')
+      .select('id, name, sizes, category')
+      .limit(100);
+
+    const lowStockProducts = (allProducts || []).filter(p => {
+      const totalStock = (p.sizes || []).reduce((sum, s) => sum + (Number(s.stock) || 0), 0);
+      return totalStock < 5;
+    }).slice(0, 5);
 
     return successResponse(res, {
       totalOrders,
       totalProducts,
       totalUsers,
       totalRevenue,
-      recentOrders: recentOrders || [],
+      recentOrders: detailedRecentOrders || [],
+      lowStockProducts,
     });
   } catch (err) {
     logger.error('getDashboardStats error', { error: err.message });

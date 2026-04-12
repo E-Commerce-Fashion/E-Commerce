@@ -3,10 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, PackageSearch, ShoppingBag, Users } from 'lucide-react'
+import { PackageSearch, ShoppingBag, Users } from 'lucide-react'
 
 const adminLinks = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Product Management', icon: PackageSearch },
   { href: '/admin/orders', label: 'Order Management', icon: ShoppingBag },
   { href: '/admin/users', label: 'User Management', icon: Users },

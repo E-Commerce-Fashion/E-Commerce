@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useCartStore } from '@/store/cartStore'
 import { formatCurrency } from '@/utils'
+import { Sparkles } from 'lucide-react'
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQty, totalPrice, totalItems } = useCartStore()
@@ -64,6 +65,32 @@ export function CartDrawer() {
                 <X size={18} />
               </button>
             </div>
+
+            {/* Free Shipping Progress */}
+            {items.length > 0 && (
+              <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                <div className="flex items-center justify-between mb-2">
+                   <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--text-muted)' }}>
+                     {totalPrice() >= 5000 
+                       ? 'Elite Delivery Unlocked' 
+                       : `Add ${formatCurrency(5000 - totalPrice())} for Free Shipping`}
+                   </p>
+                   <span className="text-[10px] font-bold text-(--accent-gold)">{Math.min(Math.round((totalPrice() / 5000) * 100), 100)}%</span>
+                </div>
+                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                   <motion.div 
+                     initial={{ width: 0 }}
+                     animate={{ width: `${Math.min((totalPrice() / 5000) * 100, 100)}%` }}
+                     className="h-full bg-linear-to-r from-(--accent-gold) to-(--accent-rose)"
+                   />
+                </div>
+                {totalPrice() >= 5000 && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] mt-2 text-(--accent-gold) flex items-center gap-1 font-bold italic">
+                    <Sparkles size={10} /> Concierge shipping applied
+                  </motion.p>
+                )}
+              </div>
+            )}
 
             {/* Items */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">

@@ -4,8 +4,9 @@ import { Suspense, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Package, CheckCircle2, Clock, Truck, XCircle, ChevronDown } from 'lucide-react'
+import { Package, CheckCircle2, Clock, Truck, XCircle, ChevronDown, ArrowRight } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/utils'
 import { toast } from 'react-hot-toast'
 import api from '@/lib/axios'
@@ -169,6 +170,16 @@ function OrdersPageContent() {
                                 <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>{formatCurrency(item.price * item.qty)}</p>
                               </div>
                             ))}
+                            <div className="pt-4 flex justify-end">
+                              <Link 
+                                href={`/orders/${order.id}`}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all hover:bg-white/5"
+                                style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                              >
+                                View Full Details
+                                <ArrowRight size={14} />
+                              </Link>
+                            </div>
                           </div>
                         </motion.div>
                       )}

@@ -109,6 +109,29 @@ export default function CheckoutPage() {
     if (items.length === 0) router.push('/products')
   }, [hasHydrated, isAuthenticated, items.length, mounted, router])
 
+  const [coupon, setCoupon] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_type: string; discount_value: number } | null>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+
+  const handleApplyCoupon = async () => {
+    if (!coupon.trim()) return
+    setCouponLoading(true)
+    try {
+      const { data } = await api.post('/coupons/validate', { 
+        code: coupon, 
+        cartTotal: totalPrice() 
+      })
+      if (data.success) {
+        setAppliedCoupon(data.data)
+        toast.success('Coupon applied! 🎉')
+      }
+    } catch (err) {
+      toast.error(axios.isAxiosError(err) ? err.response?.data?.message : 'Invalid coupon')
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
   const handlePayment = async () => {
     if (!address.name || !address.phone || !address.street || !address.city || !address.state || !address.pincode) {
       toast.error('Please fill all address fields')
@@ -127,6 +150,7 @@ export default function CheckoutPage() {
           qty: i.qty,
         })),
         shippingAddress: address,
+        couponCode: appliedCoupon?.code
       })
 
       if (!data.success) throw new Error(data.message)
@@ -198,7 +222,12 @@ export default function CheckoutPage() {
   const subtotal = mounted ? totalPrice() : 0
   const shipping = subtotal >= 999 ? 0 : 99
   const tax = Math.round(subtotal * 0.18)
-  const grandTotal = subtotal + shipping + tax
+  const discount = !appliedCoupon ? 0 : 
+    appliedCoupon.discount_type === 'percentage' 
+      ? Math.round(subtotal * (appliedCoupon.discount_value / 100))
+      : appliedCoupon.discount_value
+
+  const grandTotal = Math.max(0, subtotal - discount + shipping + tax)
 
   return (
     <>
@@ -437,15 +466,45 @@ export default function CheckoutPage() {
               <div className="p-6 rounded-2xl sticky top-32" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
                 <h3 className="text-lg font-bold font-serif mb-4" style={{ color: 'var(--text-primary)' }}>Order Summary</h3>
 
+                {/* Coupon UI */}
+                <div className="mb-6">
+                  <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>Have a Coupon?</p>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="e.g. FIRST10"
+                      value={coupon}
+                      onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                      className="flex-1 px-3 py-2 rounded-xl bg-transparent border text-xs focus:border-(--accent-gold) outline-none transition-all"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    />
+                    <button 
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !coupon}
+                      className="px-4 py-2 rounded-xl bg-white/5 border text-[10px] font-bold uppercase tracking-wider transition-all hover:bg-white/10 disabled:opacity-30"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                    >
+                      {couponLoading ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                  {appliedCoupon && (
+                    <div className="mt-2 flex items-center justify-between px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                      <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">{appliedCoupon.code} Applied</span>
+                      <button onClick={() => setAppliedCoupon(null)} className="text-[10px] text-green-500 hover:underline">Remove</button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-3 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
                   {[
                     { label: `Subtotal (${safeItems.length} items)`, value: formatCurrency(subtotal) },
+                    ...(discount > 0 ? [{ label: `Discount (${appliedCoupon?.code})`, value: `-${formatCurrency(discount)}`, color: '#22c55e' }] : []),
                     { label: 'Shipping', value: shipping === 0 ? 'Free' : formatCurrency(shipping) },
                     { label: 'Tax (18% GST)', value: formatCurrency(tax) },
-                  ].map(({ label, value }) => (
+                  ].map(({ label, value, color }) => (
                     <div key={label} className="flex justify-between text-sm">
                       <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
-                      <span style={{ color: value === 'Free' ? '#22c55e' : 'var(--text-primary)' }} className="font-medium">{value}</span>
+                      <span style={{ color: color || (value === 'Free' ? '#22c55e' : 'var(--text-primary)') }} className="font-medium">{value}</span>
                     </div>
                   ))}
                 </div>

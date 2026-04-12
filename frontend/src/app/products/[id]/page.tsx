@@ -13,6 +13,7 @@ import { formatCurrency, getDiscountPercent } from '@/utils'
 import { toast } from 'react-hot-toast'
 import api from '@/lib/axios'
 import type { Product } from '@/components/product/ProductCard'
+import { ProductReviews } from '@/components/product/ProductReviews'
 
 export default function ProductDetailPage() {
   const { id } = useParams()
@@ -405,6 +406,9 @@ export default function ProductDetailPage() {
               </div>
             </motion.div>
           </div>
+
+          {/* Reviews Section */}
+          <ProductReviews productId={product.id} />
         </div>
       </main>
     </>

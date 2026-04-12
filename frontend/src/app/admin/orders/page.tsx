@@ -1,245 +1,256 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { Loader2, PackageCheck, RefreshCw } from 'lucide-react'
-import axios from 'axios'
-import { toast } from 'react-hot-toast'
-import api from '@/lib/axios'
-import { useUserStore } from '@/store/userStore'
-import { formatCurrency, formatDate } from '@/utils'
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Loader2, PackageCheck, RefreshCw, Filter,
+  ChevronDown, Search, Clock, CheckCircle2, XCircle,
+  Truck, Package
+} from "lucide-react";
+import { toast } from "react-hot-toast";
+import api from "@/lib/axios";
+import { useUserStore } from "@/store/userStore";
+import { formatCurrency, formatDate } from "@/utils";
+import { cn } from "@/lib/utils";
 
-type OrderStatus = 'placed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded'
-
-type OrderProfile = {
-  name?: string | null
-  avatar_url?: string | null
-  phone?: string | null
-}
+type OrderStatus = "placed" | "processing" | "shipped" | "delivered" | "cancelled";
+type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 
 type AdminOrder = {
-  id: string
-  user_id: string | null
-  total_amount: number
-  payment_status: PaymentStatus
-  order_status: OrderStatus
-  created_at: string
-  profiles?: OrderProfile | OrderProfile[] | null
-}
+  id: string;
+  user_id: string | null;
+  total_amount: number;
+  payment_status: PaymentStatus;
+  order_status: OrderStatus;
+  created_at: string;
+  profiles?: { name?: string | null; phone?: string | null } | null;
+};
 
-const ORDER_STATUS_OPTIONS: OrderStatus[] = ['placed', 'processing', 'shipped', 'delivered', 'cancelled']
-const PAYMENT_STATUS_OPTIONS: Array<'all' | PaymentStatus> = ['all', 'pending', 'paid', 'failed', 'refunded']
+const STATUS_OPTIONS: OrderStatus[] = ["placed", "processing", "shipped", "delivered", "cancelled"];
+const PAYMENT_FILTER: Array<"all" | PaymentStatus> = ["all", "pending", "paid", "failed", "refunded"];
 
-function getOrderProfile(profiles: AdminOrder['profiles']) {
-  if (!profiles) return null
-  return Array.isArray(profiles) ? profiles[0] : profiles
+const statusConfig: Record<OrderStatus, { label: string; color: string; icon: any }> = {
+  placed: { label: "Placed", color: "bg-slate-500/15 text-slate-400", icon: Package },
+  processing: { label: "Processing", color: "bg-amber-500/15 text-amber-400", icon: Clock },
+  shipped: { label: "Shipped", color: "bg-blue-500/15 text-blue-400", icon: Truck },
+  delivered: { label: "Delivered", color: "bg-emerald-500/15 text-emerald-400", icon: CheckCircle2 },
+  cancelled: { label: "Cancelled", color: "bg-rose-500/15 text-rose-400", icon: XCircle },
+};
+
+function getProfile(profiles: AdminOrder["profiles"]) {
+  if (!profiles) return null;
+  return Array.isArray(profiles) ? (profiles as any)[0] : profiles;
 }
 
 export default function AdminOrdersPage() {
-  const router = useRouter()
-  const { isAuthenticated, hasHydrated, user } = useUserStore()
+  const router = useRouter();
+  const { isAuthenticated, hasHydrated, user } = useUserStore();
 
-  const [loading, setLoading] = useState(true)
-  const [orders, setOrders] = useState<AdminOrder[]>([])
-  const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>('all')
-  const [paymentFilter, setPaymentFilter] = useState<'all' | PaymentStatus>('all')
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [draftStatus, setDraftStatus] = useState<Record<string, OrderStatus>>({})
+  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"all" | OrderStatus>("all");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | PaymentStatus>("all");
+  const [search, setSearch] = useState("");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [draftStatus, setDraftStatus] = useState<Record<string, OrderStatus>>({});
 
   const fetchOrders = async () => {
     try {
-      setLoading(true)
-      const params: Record<string, string | number> = { limit: 100 }
-      if (statusFilter !== 'all') params.status = statusFilter
-      if (paymentFilter !== 'all') params.payment_status = paymentFilter
-
-      const { data } = await api.get('/admin/orders', { params })
-      if (data.success) {
-        setOrders((data.data || []) as AdminOrder[])
-      }
-    } catch (err: unknown) {
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Failed to load orders'
-        : 'Failed to load orders'
-      toast.error(message)
+      setLoading(true);
+      const params: Record<string, string | number> = { limit: 100 };
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (paymentFilter !== "all") params.payment_status = paymentFilter;
+      const { data } = await api.get("/admin/orders", { params });
+      if (data.success) setOrders(data.data || []);
+    } catch {
+      toast.error("Failed to load orders");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (!hasHydrated) return
-
-    if (!isAuthenticated) {
-      router.replace('/login')
-      return
-    }
-
-    if (user?.role !== 'admin') {
-      router.replace('/profile')
-      toast.error('Admin access required')
-      return
-    }
-
-    fetchOrders()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, isAuthenticated, router, user?.role, statusFilter, paymentFilter])
+    if (!hasHydrated) return;
+    if (!isAuthenticated) { router.replace("/login"); return; }
+    if (user?.role !== "admin") { router.replace("/profile"); return; }
+    fetchOrders();
+  }, [hasHydrated, isAuthenticated, user?.role, statusFilter, paymentFilter]);
 
   const updateOrder = async (order: AdminOrder) => {
-    const nextStatus = draftStatus[order.id] || order.order_status
-    if (nextStatus === order.order_status) return
-
-    setUpdatingId(order.id)
+    const next = draftStatus[order.id] || order.order_status;
+    if (next === order.order_status) return;
+    setUpdatingId(order.id);
     try {
-      const { data } = await api.put(`/admin/orders/${order.id}/status`, { order_status: nextStatus })
+      const { data } = await api.put(`/admin/orders/${order.id}/status`, { order_status: next });
       if (data.success) {
-        setOrders((prev) => prev.map((item) => (
-          item.id === order.id ? { ...item, order_status: nextStatus } : item
-        )))
-        toast.success('Order status updated')
+        setOrders((prev) => prev.map((o) => o.id === order.id ? { ...o, order_status: next } : o));
+        toast.success("Order status updated");
       }
-    } catch (err: unknown) {
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Failed to update order'
-        : 'Failed to update order'
-      toast.error(message)
+    } catch {
+      toast.error("Failed to update order");
     } finally {
-      setUpdatingId(null)
+      setUpdatingId(null);
     }
-  }
+  };
+
+  const filtered = orders.filter((o) => {
+    if (!search) return true;
+    const profile = getProfile(o.profiles);
+    return (
+      o.id.toLowerCase().includes(search.toLowerCase()) ||
+      (profile?.name || "").toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
   return (
-    <div className="w-full space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-none border p-5 sm:p-6"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
-      >
-        <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--accent-gold)' }}>Order management</p>
-        <h1 className="mt-2 text-3xl font-bold font-serif" style={{ color: 'var(--text-primary)' }}>
-          Manage Orders
-        </h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Track order progress and update delivery pipeline.
-        </p>
-      </motion.div>
-
-      <div className="rounded-2xl border p-4 sm:p-5" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | OrderStatus)}
-            className="rounded-xl px-3 py-2 text-sm outline-none"
-            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-          >
-            <option value="all">All order statuses</option>
-            {ORDER_STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status} className="capitalize">{status}</option>
-            ))}
-          </select>
-
-          <select
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value as 'all' | PaymentStatus)}
-            className="rounded-xl px-3 py-2 text-sm outline-none"
-            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-          >
-            {PAYMENT_STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status} className="capitalize">
-                {status === 'all' ? 'All payment statuses' : status}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="button"
-            onClick={fetchOrders}
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold"
-            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-          >
-            <RefreshCw size={14} />
-            Refresh
-          </button>
+    <div className="space-y-5 pb-10">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-1">Order Management</h2>
+          <p className="text-slate-500 text-sm">Track and update order delivery pipeline.</p>
         </div>
+        <button
+          onClick={fetchOrders}
+          className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/5 rounded-xl text-sm text-slate-400 hover:text-white transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" /> Refresh
+        </button>
       </div>
 
-      {loading ? (
-        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-          <Loader2 size={16} className="animate-spin" />
-          Loading orders...
+      {/* Filters */}
+      <div className="admin-glass rounded-2xl p-4 flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-45">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search orders or customers..."
+            className="w-full bg-white/5 border border-white/5 rounded-xl py-2 pl-9 pr-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500/40"
+          />
         </div>
-      ) : (
-        <div className="space-y-4">
-          {orders.map((order) => {
-            const profile = getOrderProfile(order.profiles)
-            const selectedStatus = draftStatus[order.id] || order.order_status
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-violet-500/40"
+        >
+          <option value="all">All Statuses</option>
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s} className="capitalize bg-[#0a0c18]">{s}</option>)}
+        </select>
+        <select
+          value={paymentFilter}
+          onChange={(e) => setPaymentFilter(e.target.value as any)}
+          className="bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-violet-500/40"
+        >
+          {PAYMENT_FILTER.map((s) => (
+            <option key={s} value={s} className="bg-[#0a0c18]">{s === "all" ? "All Payments" : s}</option>
+          ))}
+        </select>
+      </div>
 
-            return (
-              <div
-                key={order.id}
-                className="rounded-2xl border p-4 sm:p-5"
-                style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.16em]" style={{ color: 'var(--accent-gold)' }}>
-                      Order #{order.id.slice(0, 8).toUpperCase()}
-                    </p>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-                      {profile?.name || 'Unknown user'} • {order.user_id ? order.user_id.slice(0, 8) : 'N/A'}
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                      Placed on {formatDate(order.created_at)}
-                    </p>
-                  </div>
+      {/* Orders Table */}
+      <div className="admin-glass rounded-2xl overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-7 h-7 text-violet-500 animate-spin" />
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-[10px] text-slate-500 uppercase tracking-wider border-b border-white/5">
+                    <th className="px-5 py-4 font-semibold">Order</th>
+                    <th className="px-4 py-4 font-semibold">Customer</th>
+                    <th className="px-4 py-4 font-semibold">Date</th>
+                    <th className="px-4 py-4 font-semibold">Amount</th>
+                    <th className="px-4 py-4 font-semibold">Payment</th>
+                    <th className="px-4 py-4 font-semibold">Status</th>
+                    <th className="px-5 py-4 font-semibold">Update</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm">
+                  {filtered.map((order) => {
+                    const profile = getProfile(order.profiles);
+                    const selected = draftStatus[order.id] || order.order_status;
+                    const cfg = statusConfig[order.order_status];
+                    const StatusIcon = cfg.icon;
 
-                  <div className="text-right">
-                    <p className="text-lg font-bold font-serif" style={{ color: 'var(--text-primary)' }}>
-                      {formatCurrency(Number(order.total_amount || 0))}
-                    </p>
-                    <p className="text-xs capitalize" style={{ color: order.payment_status === 'paid' ? '#22c55e' : 'var(--text-muted)' }}>
-                      Payment: {order.payment_status}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setDraftStatus((prev) => ({ ...prev, [order.id]: e.target.value as OrderStatus }))}
-                    className="rounded-xl px-3 py-2 text-sm capitalize outline-none"
-                    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                  >
-                    {ORDER_STATUS_OPTIONS.map((status) => (
-                      <option key={status} value={status} className="capitalize">{status}</option>
-                    ))}
-                  </select>
-
-                  <button
-                    type="button"
-                    onClick={() => updateOrder(order)}
-                    disabled={updatingId === order.id || selectedStatus === order.order_status}
-                    className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60"
-                    style={{ background: 'linear-gradient(135deg, var(--accent-gold), var(--accent-rose))', color: '#0A0A0F' }}
-                  >
-                    {updatingId === order.id ? <Loader2 size={14} className="animate-spin" /> : <PackageCheck size={14} />}
-                    Update Status
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-
-          {!orders.length && (
-            <div className="rounded-2xl border p-6 text-center" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No orders found for the selected filters.</p>
+                    return (
+                      <tr key={order.id} className="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+                        <td className="px-5 py-4">
+                          <span className="text-violet-400 font-semibold">
+                            #{order.id.slice(0, 8).toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div>
+                            <p className="text-slate-200 font-medium">{profile?.name || "Unknown"}</p>
+                            <p className="text-[10px] text-slate-500">{order.user_id?.slice(0, 8) || "—"}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-slate-400 text-xs">{formatDate(order.created_at)}</td>
+                        <td className="px-4 py-4 font-semibold text-white">
+                          {formatCurrency(Number(order.total_amount || 0))}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={cn(
+                            "text-[10px] font-semibold uppercase px-2.5 py-1 rounded-md",
+                            order.payment_status === "paid"
+                              ? "bg-emerald-500/15 text-emerald-400"
+                              : order.payment_status === "failed"
+                              ? "bg-rose-500/15 text-rose-400"
+                              : "bg-amber-500/15 text-amber-400"
+                          )}>
+                            {order.payment_status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={cn("flex items-center gap-1.5 text-[10px] font-semibold uppercase px-2.5 py-1 rounded-md w-fit", cfg.color)}>
+                            <StatusIcon className="w-3 h-3" />
+                            {cfg.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={selected}
+                              onChange={(e) => setDraftStatus((p) => ({ ...p, [order.id]: e.target.value as OrderStatus }))}
+                              className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 outline-none focus:border-violet-500/40"
+                            >
+                              {STATUS_OPTIONS.map((s) => (
+                                <option key={s} value={s} className="capitalize bg-[#0a0c18]">{s}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => updateOrder(order)}
+                              disabled={updatingId === order.id || selected === order.order_status}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-40"
+                            >
+                              {updatingId === order.id
+                                ? <Loader2 className="w-3 h-3 animate-spin" />
+                                : <PackageCheck className="w-3 h-3" />}
+                              Save
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
-      )}
+            {filtered.length === 0 && (
+              <div className="flex items-center justify-center h-40 text-slate-500 text-sm">
+                No orders found
+              </div>
+            )}
+            <div className="px-5 py-3 border-t border-white/5 text-xs text-slate-500">
+              Showing {filtered.length} of {orders.length} orders
+            </div>
+          </>
+        )}
+      </div>
     </div>
-  )
+  );
 }
