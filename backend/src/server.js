@@ -35,19 +35,29 @@ app.use(helmet({
 }));
 
 // Support comma-separated CLIENT_URL list for multi-origin (local + Render)
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
+const configuredOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
   .split(',')
-  .map((s) => s.trim())
+  .map((s) => s.trim().replace(/\/$/, '')) // remove trailing slash
   .filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow same-origin requests (no origin header) and any listed origin
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    // Allow same-origin requests (no origin header)
+    if (!origin) return callback(null, true);
+
+    const isDev = process.env.NODE_ENV !== 'production';
+    
+    // In dev, generously allow localhost and local network IPs (e.g. 192.168.*)
+    if (isDev && (origin.startsWith('http://localhost') || origin.startsWith('http://192.168.') || origin.startsWith('http://127.0.0.1'))) {
+      return callback(null, true);
     }
+
+    // Check configured origins
+    if (configuredOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
