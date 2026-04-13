@@ -4,10 +4,12 @@ import { successResponse, createdResponse, errorResponse } from '../utils/apiRes
 import { sendWelcomeEmail } from '../utils/sendEmail.js';
 import logger from '../utils/logger.js';
 
+const isDeployed = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true' || process.env.COOKIE_SECURE === 'true';
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: isDeployed,
+  sameSite: isDeployed ? 'none' : 'lax',
   path: '/',
 };
 
