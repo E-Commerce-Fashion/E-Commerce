@@ -315,7 +315,7 @@ export function RecentProductsSection({ products, category }: RecentProductsSect
 
   return (
     <section className="w-full py-20 sm:py-24 px-3 sm:px-5 lg:px-6">
-      <div className="mx-auto w-full max-w-screen-2xl">
+      <div className="mx-auto w-full ">
         <div className="mb-16 border-b pb-8" style={{ borderColor: 'var(--border)' }}>
           <p className="text-[10px] uppercase tracking-[0.3em] font-black mb-2" style={{ color: 'var(--accent-gold)' }}>
             Editorial Picks

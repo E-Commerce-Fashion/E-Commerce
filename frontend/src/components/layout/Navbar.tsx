@@ -145,7 +145,7 @@ function NavbarInner() {
             }`}
         >
           {/* 3-zone: [Logo] ── [Nav centered] ── [Actions] */}
-          <div className="mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-10 gap-2 w-full max-w-screen-2xl">
+          <div className="mx-auto flex items-center justify-between h-16 px-4 sm:px-6 lg:px-10 gap-2 w-full ">
 
             {/* ① Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group mr-2">

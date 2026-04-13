@@ -26,7 +26,7 @@ export default function ProductsPage() {
     <Suspense
       fallback={
         <main className="page-with-navbar-offset min-h-screen px-3 sm:px-6 lg:px-8 pb-16 bg-linear-to-br from-[#5f3a45] via-[#2a284f] to-[#161b42]">
-          <div className="mx-auto max-w-7xl pt-2 sm:pt-3">
+          <div className="mx-auto  pt-2 sm:pt-3">
             <div className="flex flex-col lg:flex-row gap-5">
               <div className="lg:w-64 shrink-0">
                 <div className="h-130 rounded-xl border border-white/10 bg-white/6 skeleton" />
@@ -148,7 +148,7 @@ function ProductsPageContent() {
 
   return (
     <main className="page-with-navbar-offset min-h-screen px-3 sm:px-6 lg:px-8 pb-16 bg-linear-to-br from-[#5f3a45] via-[#2a284f] to-[#161b42]">
-      <div className="mx-auto max-w-7xl pt-2 sm:pt-3">
+      <div className="mx-auto  pt-2 sm:pt-3">
         <div className="flex flex-col lg:flex-row gap-5">
           <aside className="lg:w-64 shrink-0">
             <button

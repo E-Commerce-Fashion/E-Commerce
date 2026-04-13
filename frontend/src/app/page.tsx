@@ -54,29 +54,29 @@ const slides = [
     title: 'Premium wear for modern living',
     subtitle: 'Discover our curated line of sharp silhouettes, soft textures, and confident layers for every season.',
     tag: 'Soft warm winter layers',
-    image: '/background/hero-futuristic-store.jpg',
-    thumb: '/background/hero-futuristic-store.jpg',
+    image: '/Background/hero-futuristic-store.jpg',
+    thumb: '/Background/hero-futuristic-store.jpg',
   },
   {
     title: 'Minimal cuts. Maximum presence.',
     subtitle: 'Tailored pieces and clean details built to move from day shifts to city nights.',
     tag: 'Urban essentials',
-    image: '/background/color-rack.jpg',
-    thumb: '/background/color-rack.jpg',
+    image: '/Background/color-rack.jpg',
+    thumb: '/Background/color-rack.jpg',
   },
   {
     title: 'Layered textures, refined attitude',
     subtitle: 'From oversized coats to slim basics, create looks that feel modern but effortless.',
     tag: 'Street luxe',
-    image: '/background/hero-futuristic-store-alt.jpg',
-    thumb: '/background/hero-futuristic-store-alt.jpg',
+    image: '/Background/hero-futuristic-store-alt.jpg',
+    thumb: '/Background/hero-futuristic-store-alt.jpg',
   },
   {
     title: 'Sharp classics for every edit',
     subtitle: 'New-season palettes, premium fabric, and silhouettes that age well in your wardrobe.',
     tag: 'Signature edits',
-    image: '/background/hoodie-set.jpg',
-    thumb: '/background/hoodie-set.jpg',
+    image: '/Background/hoodie-set.jpg',
+    thumb: '/Background/hoodie-set.jpg',
   },
 ]
 
@@ -84,17 +84,17 @@ const moodboards = [
   {
     title: 'Everyday Tailoring',
     desc: 'Streamlined layers in neutral shades for work and weekend.',
-    image: '/background/color-rack.jpg',
+    image: '/Background/color-rack.jpg',
   },
   {
     title: 'After-Hours Edit',
     desc: 'Crisp textures and deeper tones for evening looks.',
-    image: '/background/neon-sale.jpg',
+    image: '/Background/neon-sale.jpg',
   },
   {
     title: 'Weekend Street Set',
     desc: 'Relaxed proportions with premium comfort fabrics.',
-    image: '/background/hero-futuristic-store.jpg',
+    image: '/Background/hero-futuristic-store.jpg',
   },
 ]
 
@@ -462,7 +462,7 @@ export default function HomePage() {
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.48, delay: 0.34 }}
-                    className="mx-auto mt-7 grid max-w-3xl grid-cols-1 gap-2.5 sm:grid-cols-3"
+                    className="mx-auto mt-7 grid max-w-3xl grid-cols-3 gap-2.5"
                   >
                     {heroMetrics.map((item) => (
                       <div
@@ -511,7 +511,7 @@ export default function HomePage() {
         </section>
 
         <section className="home-section-divider home-preview-spacing w-full px-3 sm:px-5 lg:px-6 pt-10 sm:pt-14 pb-16 sm:pb-20">
-          <div className="mx-auto w-full max-w-screen-2xl">
+          <div className="mx-auto w-full ">
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -546,7 +546,7 @@ export default function HomePage() {
         </section>
 
         <section className="home-section-divider w-full px-3 sm:px-5 lg:px-6 py-10 sm:py-14">
-          <div className="mx-auto w-full max-w-screen-2xl">
+          <div className="mx-auto w-full ">
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -639,7 +639,7 @@ export default function HomePage() {
         </section>
 
         <div className="w-full border-y border-(--border) bg-(--bg-elevated)">
-          <div className="mx-auto flex w-full max-w-screen-2xl flex-wrap justify-center gap-4 px-3 py-8 sm:px-5 lg:px-6">
+          <div className="mx-auto flex w-full  flex-wrap justify-center gap-4 px-3 py-8 sm:px-5 lg:px-6">
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -661,7 +661,7 @@ export default function HomePage() {
         />
 
         <section className="home-section-divider w-full px-3 sm:px-5 lg:px-6 pb-12 sm:pb-16">
-          <div className="mx-auto w-full max-w-screen-2xl">
+          <div className="mx-auto w-full ">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -725,7 +725,7 @@ export default function HomePage() {
         </section>
 
         <section className="home-section-divider w-full px-3 sm:px-5 lg:px-6 pb-12 sm:pb-16">
-          <div className="mx-auto w-full max-w-screen-2xl grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+          <div className="mx-auto w-full  grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             {serviceHighlights.map(({ title, desc, icon: Icon }, index) => (
               <motion.div
                 key={title}
@@ -749,7 +749,7 @@ export default function HomePage() {
         {/* Recent High-Rated Reviews Section */}
         {recentReviews.length > 0 && (
           <section className="w-full px-3 sm:px-5 lg:px-6 pb-16 sm:pb-20">
-            <div className="mx-auto w-full max-w-screen-2xl">
+            <div className="mx-auto w-full ">
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -829,7 +829,7 @@ export default function HomePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.56 }}
-            className="home-glow-surface mx-auto w-full max-w-screen-2xl rounded-3xl border px-5 sm:px-8 lg:px-10 py-10 sm:py-14"
+            className="home-glow-surface mx-auto w-full  rounded-3xl border px-5 sm:px-8 lg:px-10 py-10 sm:py-14"
             style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
           >
             <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
@@ -876,12 +876,12 @@ export default function HomePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="home-glow-surface mx-auto w-full max-w-screen-2xl rounded-none border px-5 sm:px-8 lg:px-10 py-8 sm:py-10"
+            className="home-glow-surface mx-auto w-full  rounded-none border px-5 sm:px-8 lg:px-10 py-8 sm:py-10"
             style={{ background: 'linear-gradient(120deg, rgba(var(--accent-gold-rgb),0.08), rgba(var(--accent-rose-rgb),0.06), var(--bg-surface))', borderColor: 'var(--border)' }}
           >
             <div className="mb-6 h-0.5 w-full" style={{ background: 'linear-gradient(90deg, var(--accent-gold), rgba(var(--accent-rose-rgb),0.8), transparent)' }} />
 
-            <div className="grid gap-7 md:grid-cols-[1.35fr_0.8fr_0.8fr]">
+            <div className="grid gap-7 grid-cols-1 sm:grid-cols-2 md:grid-cols-[1.35fr_0.8fr_0.8fr]">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--accent-gold)' }}>Fashion System</p>
                 <p className="mt-2 font-serif text-2xl sm:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>FashionForge</p>

@@ -156,7 +156,7 @@ img,
 video,
 canvas,
 svg {
-  max-width: 100%;
+  max-width: 100vw;
   height: auto;
 }
 
@@ -861,3 +861,71 @@ a {
     background-position: -200% 0;
   }
 }
+
+/* ── GLOBAL MOBILE RESPONSIVENESS ─────────────────────────────── */
+/* Prevent any element from causing horizontal scroll */
+*,
+*::before,
+*::after {
+  min-width: 0;
+}
+
+/* Ensure sections never overflow on mobile */
+section,
+footer,
+main,
+article,
+aside,
+header,
+nav {
+  max-width: 100vw;
+}
+
+/* Hero gradient blobs — clip to viewport on mobile */
+@media (max-width: 640px) {
+  .home-ambient > .pointer-events-none > div {
+    transform: none !important;
+    max-width: 100vw;
+    overflow: hidden;
+  }
+
+  /* Reduce hero title padding on very small screens */
+  .relative.min-h-screen .absolute.inset-0.z-10 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Collection preview cards — give comfortable mobile height */
+  .relative.h-56 {
+    height: 11rem;
+  }
+
+  /* Reduce oversized decorative motion blobs */
+  .absolute.-left-20,
+  .absolute.-right-28 {
+    display: none;
+  }
+}
+
+/* ── RESPONSIVE CONTAINER HELPERS ────────────────────────────── */
+.responsive-container {
+  width: 100%;
+  max-width: min(100%, 1536px);
+  margin-inline: auto;
+  padding-inline: clamp(0.75rem, 3vw, 1.5rem);
+}
+
+/* ── TOUCH TARGET MINIMUM ────────────────────────────────────── */
+@media (max-width: 640px) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Exception for icon-only buttons that have explicit size */
+  button.w-8, button.w-9, button.w-10, button.w-12,
+  a.w-8, a.w-9, a.w-10 {
+    min-height: unset;
+    min-width: unset;
+  }
+}
