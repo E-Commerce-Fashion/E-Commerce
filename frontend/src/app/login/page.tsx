@@ -36,7 +36,7 @@ export default function LoginPage() {
         const loggedInUser = data.data.user
         setUser(loggedInUser)
         toast.success('Welcome back!')
-        router.replace(loggedInUser.role === 'admin' ? '/admin' : '/')
+        router.replace(loggedInUser.role === 'admin' ? '/profile' : '/')
       }
     } catch (err: unknown) {
       const message = axios.isAxiosError(err)

@@ -489,11 +489,7 @@ function NavbarInner() {
                     </Link>
                     {user?.role === 'admin' && (
                       <>
-                        <Link href="/admin" onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-colors ${isDarkTheme ? 'text-white/60 hover:text-white hover:bg-white/7' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-900/6'}`}>
-                          <User className="w-4 h-4 shrink-0" />
-                          Admin Dashboard
-                        </Link>
-                        <Link href="/admin/products" onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-colors ${isDarkTheme ? 'text-white/60 hover:text-white hover:bg-white/7' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-900/6'}`}>
+                        <Link href="/profile/products" onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-colors ${isDarkTheme ? 'text-white/60 hover:text-white hover:bg-white/7' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-900/6'}`}>
                           <ShoppingBag className="w-4 h-4 shrink-0" />
                           Product Management
                         </Link>
