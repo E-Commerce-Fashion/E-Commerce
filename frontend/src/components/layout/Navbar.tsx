@@ -29,15 +29,6 @@ const navLinks = [
     ],
   },
   { label: 'New In', href: '/products?sort=created_at&order=desc' },
-  {
-    label: 'Account',
-    href: '/profile',
-    children: [
-      { label: 'My Profile', href: '/profile' },
-      { label: 'My Orders', href: '/orders' },
-      { label: 'Wishlist', href: '/wishlist' },
-    ],
-  },
 ]
 
 // ── Outer shell: pure passthrough — zero hooks, always safe ──────
