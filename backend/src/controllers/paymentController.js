@@ -179,11 +179,13 @@ export const handleWebhook = async (req, res) => {
   try {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
     const signature = req.headers['x-razorpay-signature'];
-    const body = JSON.stringify(req.body);
+    
+    // req.body is a Buffer here because of express.raw in server.js
+    const bodyString = req.body.toString();
 
     const expectedSig = crypto
       .createHmac('sha256', webhookSecret)
-      .update(body)
+      .update(bodyString)
       .digest('hex');
 
     if (signature !== expectedSig) {
@@ -191,10 +193,11 @@ export const handleWebhook = async (req, res) => {
       return res.status(400).json({ received: false });
     }
 
-    const event = req.body.event;
+    const payload = JSON.parse(bodyString);
+    const event = payload.event;
 
     if (event === 'payment.failed') {
-      const razorpayOrderId = req.body.payload.payment.entity.order_id;
+      const razorpayOrderId = payload.payload.payment.entity.order_id;
       await supabaseAdmin
         .from('orders')
         .update({ payment_status: 'failed' })

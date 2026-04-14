@@ -363,7 +363,7 @@ function NavbarInner() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-              className={`fixed inset-y-0 left-0 z-50 w-72 backdrop-blur-2xl border-r flex flex-col lg:hidden ${isDarkTheme ? 'bg-[#0b0920]/98 border-white/10' : 'bg-[rgba(255,255,255,0.98)] border-slate-900/12'}`}
+              className={`glassmorphic-sidebar fixed inset-y-0 left-0 z-50 w-72 backdrop-blur-2xl border-r flex flex-col lg:hidden ${isDarkTheme ? 'bg-[#0b0920]/98 border-white/10' : 'bg-[rgba(255,255,255,0.98)] border-slate-900/12'}`}
             >
               <div className={`flex items-center justify-between px-5 h-16 border-b shrink-0 ${isDarkTheme ? 'border-white/8' : 'border-slate-900/12'}`}>
                 <Link href="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-2">

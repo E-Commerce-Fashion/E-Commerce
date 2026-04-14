@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { Navbar } from '@/components/layout/Navbar'
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { CartDrawer } from '@/components/cart/CartDrawer'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
@@ -53,6 +54,7 @@ export default function RootLayout({
             }}
           />
           {children}
+          <MobileBottomNav />
         </ThemeProvider>
       </body>
     </html>

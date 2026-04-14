@@ -698,7 +698,7 @@ export default function HomePage() {
                   viewport={{ once: true }}
                   transition={performanceMode ? { duration: 0.22, delay: index * 0.03 } : { duration: 0.45, delay: index * 0.08 }}
                   whileHover={shouldReduceMotion || performanceMode ? undefined : { y: -6 }}
-                  className="home-lift-card group overflow-hidden rounded-2xl border transition-all duration-300"
+                  className="home-lift-card premium-card-hover shine-effect group overflow-hidden rounded-2xl border transition-all duration-300"
                   style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
                 >
                   <div className="relative h-56 sm:h-64 overflow-hidden">
@@ -733,7 +733,7 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.45, delay: index * 0.08 }}
-                className="home-lift-card home-lift-card-soft group rounded-none border p-4 sm:p-5 transition-all duration-300"
+                className="home-lift-card home-lift-card-soft premium-card-hover animated-border group rounded-none border p-4 sm:p-5 transition-all duration-300"
                 style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
               >
                 <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-none" style={{ background: 'rgba(var(--accent-gold-rgb),0.12)', color: 'var(--accent-gold)' }}>
@@ -855,7 +855,7 @@ export default function HomePage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.42, delay: index * 0.06 }}
-                    className="group rounded-2xl border p-5 transition-all hover:bg-white/2"
+                    className="group rounded-2xl border p-5 transition-all hover:bg-white/2 premium-card-hover"
                     style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)' }}
                   >
                     <p className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>

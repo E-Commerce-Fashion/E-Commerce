@@ -928,4 +928,556 @@ nav {
     min-height: unset;
     min-width: unset;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE BOTTOM NAVIGATION BAR
+   Always rendered in the DOM (no hydration mismatch).
+   Shown via CSS on < 640 px; hidden on admin via [data-hidden].
+───────────────────────────────────────────────────────────── */
+.mobile-bottom-nav {
+  /* hidden by default on desktop */
+  display: none;
+
+  /* positioning — high specificity to win over any resets */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* slide transition driven by JS `transform` prop */
+  will-change: transform;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Hide on admin pages (data-attribute set by JS — no hydration issue) */
+.mobile-bottom-nav[data-hidden] {
+  display: none !important;
+}
+
+/* Show only on true mobile widths */
+@media (max-width: 639px) {
+  .mobile-bottom-nav {
+    display: block;
+  }
+
+  /* Push page content above the bar */
+  body {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  footer {
+    padding-bottom: calc(2rem + 72px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Frosted-glass fill */
+.mobile-bottom-nav__glass {
+  position: absolute;
+  inset: 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border-top: 1px solid var(--glass-border);
+  box-shadow:
+    0 -4px 30px rgba(0, 0, 0, 0.18),
+    0 -1px 8px rgba(0, 0, 0, 0.10);
+}
+
+[data-theme="dark"] .mobile-bottom-nav__glass,
+[data-theme="dim"]  .mobile-bottom-nav__glass {
+  box-shadow:
+    0 -4px 36px rgba(0, 0, 0, 0.45),
+    0 -1px 8px rgba(0, 0, 0, 0.28);
+}
+
+/* Thin gold–rose accent line at the top of the bar */
+.mobile-bottom-nav__accent {
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--accent-gold-rgb), 0.55) 28%,
+    rgba(var(--accent-rose-rgb), 0.45) 72%,
+    transparent
+  );
+  z-index: 2;
+}
+
+/* Row of nav items */
+.mobile-bottom-nav__items {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 68px;
+  padding: 0 4px;
+}
+
+/* Each nav tap target */
+.mobile-bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  padding: 6px 2px;
+  border-radius: 16px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.22s ease, transform 0.18s ease;
+  /* override the global min-height rule on mobile */
+  min-height: unset !important;
+  min-width: unset !important;
+}
+
+.mobile-bottom-nav__item:active {
+  transform: scale(0.90);
+}
+
+/* Active state — driven by data-active attribute */
+.mobile-bottom-nav__item[data-active] {
+  color: var(--accent-gold);
+}
+
+/* Icon shell (positions badge + pill relative to icon) */
+.mobile-bottom-nav__icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+}
+
+/* Animated background pill behind active icon */
+.mobile-bottom-nav__pill {
+  position: absolute;
+  inset: -4px -10px;
+  border-radius: 14px;
+  background: rgba(var(--accent-gold-rgb), 0.13);
+  border: 1px solid rgba(var(--accent-gold-rgb), 0.22);
+  z-index: -1;
+}
+
+/* Cart count badge */
+.mobile-bottom-nav__badge {
+  position: absolute;
+  top: -4px;
+  right: -7px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.45);
+}
+
+/* Label below icon */
+.mobile-bottom-nav__label {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ── ENHANCED GLASSMORPHIC SIDEBAR ───────────────────────────── */
+.glassmorphic-sidebar {
+  position: relative;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(28px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.6) !important;
+  border-right: 1px solid var(--glass-border) !important;
+  box-shadow:
+    8px 0 40px rgba(0, 0, 0, 0.25),
+    inset 0 0 80px rgba(255, 255, 255, 0.015) !important;
+}
+
+[data-theme="light"] .glassmorphic-sidebar {
+  box-shadow:
+    8px 0 40px rgba(15, 23, 42, 0.08),
+    inset 0 0 80px rgba(255, 255, 255, 0.5) !important;
+}
+
+.glassmorphic-sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--accent-gold-rgb), 0.03) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(var(--accent-rose-rgb), 0.03) 100%
+  );
+  pointer-events: none;
+}
+
+/* ── PREMIUM ANIMATION UTILITIES ─────────────────────────────── */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 8px  rgba(var(--accent-gold-rgb), 0.2); }
+  50%       { box-shadow: 0 0 24px rgba(var(--accent-gold-rgb), 0.4); }
+}
+
+.reveal-section {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.reveal-section:nth-child(2) { animation-delay: 0.10s; }
+.reveal-section:nth-child(3) { animation-delay: 0.20s; }
+.reveal-section:nth-child(4) { animation-delay: 0.30s; }
+
+/* Premium hover: lift + subtle glow ring */
+.premium-card-hover {
+  transition:
+    transform  400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 400ms ease,
+    border-color 300ms ease;
+}
+.premium-card-hover:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow:
+    0 20px 40px -12px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(var(--accent-gold-rgb), 0.15);
+}
+
+/* Gradient underline on hover */
+.animated-border { position: relative; overflow: hidden; }
+.animated-border::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent-gold), var(--accent-rose));
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.animated-border:hover::after { width: 100%; }
+
+/* Diagonal shine sweep on hover */
+.shine-effect { position: relative; overflow: hidden; }
+.shine-effect::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -75%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: skewX(-25deg);
+  transition: left 0.75s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.shine-effect:hover::before { left: 125%; }
+
+
+@media (max-width: 639px) {
+  .mobile-bottom-nav {
+    display: block !important;
+  }
+
+  /* Add bottom padding to body so content isn't hidden behind the nav */
+  body {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Extra footer spacing for bottom nav awareness */
+  footer {
+    padding-bottom: calc(2rem + 72px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+.mobile-bottom-nav-glass {
+  position: absolute;
+  inset: 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border-top: 1px solid var(--glass-border);
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.15),
+              0 -1px 6px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .mobile-bottom-nav-glass,
+[data-theme="dim"] .mobile-bottom-nav-glass {
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.4),
+              0 -1px 6px rgba(0, 0, 0, 0.25);
+}
+
+.mobile-bottom-nav-accent {
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(var(--accent-gold-rgb), 0.5) 30%,
+    rgba(var(--accent-rose-rgb), 0.4) 70%,
+    transparent);
+  z-index: 2;
+}
+
+.mobile-bottom-nav-items {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 68px;
+  padding: 0 4px;
+  z-index: 1;
+}
+
+.mobile-bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  padding: 6px 2px;
+  border-radius: 16px;
+  color: var(--text-muted);
+  transition: color 0.25s ease, transform 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font: inherit;
+  min-height: unset !important;
+  min-width: unset !important;
+}
+
+.mobile-bottom-nav-item:active {
+  transform: scale(0.92);
+}
+
+.mobile-bottom-nav-item.active {
+  color: var(--accent-gold);
+}
+
+.mobile-bottom-nav-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+}
+
+.mobile-bottom-nav-indicator {
+  position: absolute;
+  inset: -4px -10px;
+  border-radius: 14px;
+  background: rgba(var(--accent-gold-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-gold-rgb), 0.2);
+  z-index: -1;
+}
+
+.mobile-bottom-nav-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+}
+
+.mobile-bottom-nav-label {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ── ENHANCED GLASSMORPHIC SIDEBAR ───────────────────────────── */
+.glassmorphic-sidebar {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(28px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.6) !important;
+  border-right: 1px solid var(--glass-border) !important;
+  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.25),
+              inset 0 0 80px rgba(255, 255, 255, 0.015) !important;
+}
+
+[data-theme="light"] .glassmorphic-sidebar {
+  box-shadow: 8px 0 40px rgba(15, 23, 42, 0.08),
+              inset 0 0 80px rgba(255, 255, 255, 0.5) !important;
+}
+
+.glassmorphic-sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(var(--accent-gold-rgb), 0.03) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(var(--accent-rose-rgb), 0.03) 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ── PREMIUM ANIMATION UTILITIES ─────────────────────────────── */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revealLine {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(var(--accent-gold-rgb), 0.2);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(var(--accent-gold-rgb), 0.4);
+  }
+}
+
+@keyframes subtleBreathe {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+}
+
+/* Smooth section reveal */
+.reveal-section {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.reveal-section:nth-child(2) { animation-delay: 0.1s; }
+.reveal-section:nth-child(3) { animation-delay: 0.2s; }
+.reveal-section:nth-child(4) { animation-delay: 0.3s; }
+
+/* Premium hover lift with glow */
+.premium-card-hover {
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 400ms ease,
+              border-color 300ms ease;
+}
+
+.premium-card-hover:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(var(--accent-gold-rgb), 0.15);
+}
+
+/* Animated gradient border */
+.animated-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.animated-border::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-gold), var(--accent-rose));
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animated-border:hover::after {
+  width: 100%;
+}
+
+/* Subtle shine effect on hover */
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  transform: skewX(-25deg);
+  transition: left 0.75s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.shine-effect:hover::before {
+  left: 125%;
+}
+
+/* ── ENHANCED FOOTER WITH BOTTOM NAV AWARENESS ───────────────── */
+@media (max-width: 639px) {
+  .mobile-bottom-nav-item .lucide {
+    transition: transform 0.2s ease;
+  }
+
+  .mobile-bottom-nav-item.active .lucide {
+    transform: scale(1.05);
+  }
 }
