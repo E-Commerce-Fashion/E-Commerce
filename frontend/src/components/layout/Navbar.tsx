@@ -125,7 +125,7 @@ function NavbarInner() {
   return (
     <>
       {/* ── Fixed Header ──────────────────────────────────────── */}
-      <header className="site-navbar fixed top-0 left-0 right-0 w-full z-[60] flex flex-col">
+      <header className="site-navbar fixed top-0 left-0 right-0 w-full z-60 flex flex-col">
         <AnimatePresence>
           {pathname === '/' && !scrolled && (
             <motion.div
