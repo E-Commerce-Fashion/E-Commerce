@@ -1,115 +1,212 @@
 "use client";
 
-import { useState } from "react";
-import { X, ChevronRight, ChevronLeft, Check, Loader2, Plus, Trash2, Upload } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X, ChevronRight, ChevronLeft, Check, Loader2, Plus, Trash2,
+  Upload, ImageOff, Star
+} from "lucide-react";
 import apiClient from "@/lib/apiClient";
 import { toast } from "react-hot-toast";
 
-interface SizeEntry {
-  size: string;
-  stock: number;
-}
+/* ─── Types ────────────────────────────────────────────────────── */
+interface SizeEntry { size: string; stock: number }
 
 interface ProductForm {
   name: string;
   description: string;
   price: string;
+  discount_price: string;
   category: string;
   tags: string;
   sizes: SizeEntry[];
-  images: string[];
+  is_featured: boolean;
+}
+
+interface ImageItem {
+  url: string;              // preview / existing
+  public_id?: string;
+  file?: File;              // local file to upload
 }
 
 interface ProductEditModalProps {
-  product?: any; // existing product for edit, undefined for add
+  product?: any;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }
 
+/* ─── Constants ────────────────────────────────────────────────── */
 const STEPS = ["Basic Info", "Inventory", "Images", "Review"];
-const CATEGORIES = ["Tops / Men", "Bottoms / Men", "Tops / Women", "Bottoms / Women", "Outerwear", "Streetwear", "Ethnic / Women", "Ethnic / Men", "Accessories"];
+const CATEGORIES = [
+  "Tops / Men", "Bottoms / Men", "Tops / Women", "Bottoms / Women",
+  "Outerwear", "Streetwear", "Ethnic / Women", "Ethnic / Men", "Accessories",
+];
 const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL", "Free Size"];
 
-function createFormState(product?: any): ProductForm {
+/* ─── Helpers ──────────────────────────────────────────────────── */
+function normalizeImages(raw: any[]): ImageItem[] {
+  if (!raw?.length) return [];
+  return raw.map(img => {
+    if (typeof img === "string") return { url: img };
+    return { url: img.url || "", public_id: img.public_id };
+  });
+}
+
+function initForm(product?: any): ProductForm {
   return {
     name: product?.name || "",
     description: product?.description || "",
     price: product?.price ? String(product.price) : "",
+    discount_price: product?.discount_price ? String(product.discount_price) : "",
     category: product?.category || "",
     tags: (product?.tags || []).join(", "),
-    sizes: product?.sizes?.length > 0 ? product.sizes : [{ size: "M", stock: 10 }],
-    images: product?.images || [],
+    sizes: product?.sizes?.length ? product.sizes : [{ size: "M", stock: 10 }],
+    is_featured: product?.is_featured ?? false,
   };
 }
 
+/* ─── Sub-components ───────────────────────────────────────────── */
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--text-muted)" }}>
+        {label}{required && <span style={{ color: "var(--accent-gold)" }}> *</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputClass = "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all duration-200 placeholder:opacity-40 focus:ring-0";
+const inputStyle = { background: "var(--bg-elevated)", borderColor: "var(--border)", color: "var(--text-primary)" };
+const focusStyle = "var(--accent-gold)";
+
+function LuxInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={`${inputClass} ${props.className || ""}`}
+      style={inputStyle}
+      onFocus={e => (e.currentTarget.style.borderColor = focusStyle)}
+      onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
+    />
+  );
+}
+
+function LuxTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={`${inputClass} resize-none ${props.className || ""}`}
+      style={inputStyle}
+      onFocus={e => (e.currentTarget.style.borderColor = focusStyle)}
+      onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
+    />
+  );
+}
+
+function LuxSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...props}
+      className={`${inputClass} ${props.className || ""}`}
+      style={{ ...inputStyle, color: props.value ? "var(--text-primary)" : "var(--text-muted)" }}
+      onFocus={e => (e.currentTarget.style.borderColor = focusStyle)}
+      onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
+    />
+  );
+}
+
+/* ─── Main Modal ───────────────────────────────────────────────── */
 export function ProductEditModal({ product, onClose, onSaved }: ProductEditModalProps) {
   const isEdit = !!product;
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [savedAt, setSavedAt] = useState("");
-
-  const [form, setForm] = useState<ProductForm>(createFormState(product));
-
+  const [form, setForm] = useState<ProductForm>(initForm(product));
+  const [images, setImages] = useState<ImageItem[]>(normalizeImages(product?.images || []));
   const [imageUrl, setImageUrl] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const update = (key: keyof ProductForm, val: any) => setForm((p) => ({ ...p, [key]: val }));
+  const update = (key: keyof ProductForm, val: any) => setForm(p => ({ ...p, [key]: val }));
 
-  const updateSize = (idx: number, key: keyof SizeEntry, val: string | number) => {
-    const updated = form.sizes.map((s, i) => i === idx ? { ...s, [key]: val } : s);
-    update("sizes", updated);
-  };
-
+  /* Size helpers */
+  const updateSize = (idx: number, key: keyof SizeEntry, val: string | number) =>
+    update("sizes", form.sizes.map((s, i) => i === idx ? { ...s, [key]: val } : s));
   const addSize = () => {
-    const usedSizes = form.sizes.map((s) => s.size);
-    const available = SIZE_OPTIONS.find((s) => !usedSizes.includes(s));
-    update("sizes", [...form.sizes, { size: available || "S", stock: 0 }]);
+    const used = form.sizes.map(s => s.size);
+    update("sizes", [...form.sizes, { size: SIZE_OPTIONS.find(s => !used.includes(s)) || "S", stock: 0 }]);
   };
+  const removeSize = (idx: number) => { if (form.sizes.length > 1) update("sizes", form.sizes.filter((_, i) => i !== idx)); };
 
-  const removeSize = (idx: number) => {
-    if (form.sizes.length === 1) return;
-    update("sizes", form.sizes.filter((_, i) => i !== idx));
-  };
-
-  const addImage = () => {
-    if (imageUrl.trim() && !form.images.includes(imageUrl.trim())) {
-      update("images", [...form.images, imageUrl.trim()]);
+  /* Image helpers */
+  const addImageUrl = () => {
+    const url = imageUrl.trim();
+    if (url && !images.some(i => i.url === url)) {
+      setImages(prev => [...prev, { url }]);
       setImageUrl("");
     }
   };
 
-  const removeImage = (idx: number) => update("images", form.images.filter((_, i) => i !== idx));
+  const addFiles = useCallback((files: FileList | null) => {
+    if (!files) return;
+    const allowed = Array.from(files).filter(f => f.type.startsWith("image/") && f.size <= 5 * 1024 * 1024);
+    if (allowed.length < files.length) toast.error("Some files were skipped (>5MB or not images)");
+    const newItems: ImageItem[] = allowed.map(file => ({
+      url: URL.createObjectURL(file),
+      file,
+    }));
+    setImages(prev => [...prev, ...newItems]);
+  }, []);
 
+  const removeImage = (idx: number) => {
+    const img = images[idx];
+    if (img.file) URL.revokeObjectURL(img.url);
+    setImages(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  /* Validation */
   const canNext = () => {
     if (step === 0) return form.name.trim() && form.price && form.category;
-    if (step === 1) return form.sizes.every((s) => s.size && s.stock >= 0);
+    if (step === 1) return form.sizes.every(s => s.size && s.stock >= 0);
     return true;
   };
 
+  /* Save */
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = {
-        name: form.name.trim(),
-        description: form.description.trim(),
-        price: Number(form.price),
-        category: form.category,
-        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-        sizes: form.sizes.map((s) => ({ size: s.size, stock: Number(s.stock) })),
-        images: form.images,
-      };
+      const fd = new FormData();
+      fd.append("name", form.name.trim());
+      fd.append("description", form.description.trim());
+      fd.append("price", form.price);
+      if (form.discount_price) fd.append("discount_price", form.discount_price);
+      fd.append("category", form.category);
+      fd.append("is_featured", String(form.is_featured));
+      fd.append("tags", form.tags.split(",").map(t => t.trim()).filter(Boolean).join(","));
+      fd.append("sizes", JSON.stringify(form.sizes.map(s => ({ size: s.size, stock: Number(s.stock) }))));
+
+      // New file uploads
+      const newFiles = images.filter(i => i.file);
+      newFiles.forEach(i => fd.append("images", i.file!));
+
+      // Existing images (already-uploaded URLs)
+      const existingImages = images.filter(i => !i.file).map(i => ({ url: i.url, public_id: i.public_id }));
+      fd.append("existing_images", JSON.stringify(existingImages));
+
+      const config = { headers: { "Content-Type": "multipart/form-data" } };
 
       if (isEdit) {
-        await apiClient.put(`/admin/products/${product.id}`, payload);
-        toast.success("Product updated successfully!");
+        await apiClient.put(`/admin/products/${product.id}`, fd, config);
+        toast.success("Product updated!");
       } else {
-        await apiClient.post("/admin/products", payload);
-        toast.success("Product created successfully!");
+        await apiClient.post("/admin/products", fd, config);
+        toast.success("Product created!");
       }
+
       await onSaved();
       setSaved(true);
-      setSavedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to save product");
     } finally {
@@ -117,31 +214,52 @@ export function ProductEditModal({ product, onClose, onSaved }: ProductEditModal
     }
   };
 
+  const handleReset = () => { setForm(initForm()); setImages([]); setStep(0); setSaved(false); };
+
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-200 p-4">
-      <div className="bg-[#0a0c18] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-200 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden rounded-3xl border"
+        style={{ background: "var(--bg-surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/5 shrink-0">
+        <div className="flex items-start justify-between px-6 pt-6 pb-0 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-white">{isEdit ? "Edit Product" : "Add New Product"}</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {saved ? "All steps completed" : `Step ${step + 1} of ${STEPS.length} — ${STEPS[step]}`}
-            </p>
+            <p className="luxury-label">{isEdit ? "Edit Product" : "New Product"}</p>
+            <h2 className="mt-1 text-xl font-serif font-bold" style={{ color: "var(--text-primary)" }}>
+              {saved ? "Saved Successfully" : STEPS[step]}
+            </h2>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors rounded-lg hover:bg-white/5">
-            <X className="w-5 h-5" />
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl transition-colors"
+            style={{ color: "var(--text-muted)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-elevated)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
+          >
+            <X size={18} />
           </button>
         </div>
 
-        {/* Progress Bar */}
-        <div className="flex gap-1 px-5 pt-4 shrink-0">
+        {/* Progress */}
+        <div className="flex gap-2 px-6 pt-5 shrink-0">
           {STEPS.map((s, i) => (
-            <div key={s} className="flex-1 flex flex-col gap-1">
-              <div className={cn(
-                "h-1 rounded-full transition-all duration-300",
-                saved || i < step ? "bg-violet-500" : i === step ? "bg-violet-500/70" : "bg-white/10"
-              )} />
-              <span className={cn("text-[9px] font-semibold uppercase tracking-wider", saved || i === step ? "text-violet-400" : "text-slate-600")}>
+            <div key={s} className="flex-1 flex flex-col gap-1.5 cursor-pointer" onClick={() => !saved && i < step && setStep(i)}>
+              <div
+                className="h-0.5 rounded-full transition-all duration-500"
+                style={{ background: saved || i <= step ? "var(--accent-gold)" : "var(--border-strong)" }}
+              />
+              <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: saved || i === step ? "var(--accent-gold)" : "var(--text-muted)" }}>
                 {s}
               </span>
             </div>
@@ -149,275 +267,322 @@ export function ProductEditModal({ product, onClose, onSaved }: ProductEditModal
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {saved && (
-            <>
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center shrink-0">
-                    <Check className="w-4 h-4 text-emerald-300" />
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <AnimatePresence mode="wait">
+            {saved && (
+              <motion.div key="saved" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <div className="rounded-2xl border p-5 flex items-center gap-4"
+                  style={{ background: "rgba(52,211,153,0.08)", borderColor: "rgba(52,211,153,0.25)" }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(52,211,153,0.15)" }}>
+                    <Check size={18} style={{ color: "#34d399" }} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-emerald-200">{isEdit ? "Product updated successfully" : "Product created successfully"}</p>
-                    <p className="text-xs text-emerald-100/80 mt-1">Your product workflow completed and catalog data has been refreshed.</p>
+                    <p className="text-sm font-bold" style={{ color: "#34d399" }}>
+                      {isEdit ? "Product updated successfully" : "Product created successfully"}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                      All {STEPS.length} steps completed. Your catalog has been refreshed.
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-2">Completed Timeline</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {STEPS.map((item, idx) => (
-                    <div key={item} className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2.5 flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center">
-                        <Check className="w-3 h-3" />
-                      </span>
-                      <div>
-                        <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-widest">Step {idx + 1}</p>
-                        <p className="text-xs text-white font-semibold">{item}</p>
-                      </div>
+                  {STEPS.map((item) => (
+                    <div key={item} className="rounded-xl border px-3 py-2.5 flex items-center gap-2"
+                      style={{ background: "var(--bg-elevated)", borderColor: "rgba(var(--accent-gold-rgb), 0.2)" }}>
+                      <Check size={12} style={{ color: "var(--accent-gold)" }} />
+                      <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{item}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-slate-500 mt-2">Completed at {savedAt}</p>
-              </div>
-            </>
-          )}
+              </motion.div>
+            )}
 
-          {/* Step 0: Basic Info */}
-          {!saved && step === 0 && (
-            <>
-              <Field label="Product Name *">
-                <input
-                  value={form.name}
-                  onChange={(e) => update("name", e.target.value)}
-                  placeholder="e.g. Neon Slim Fit Shirt"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500/40"
-                />
-              </Field>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Price (₹) *">
-                  <input
-                    type="number"
-                    value={form.price}
-                    onChange={(e) => update("price", e.target.value)}
-                    placeholder="e.g. 3499"
-                    min={0}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500/40"
-                  />
+            {/* Step 0: Basic Info */}
+            {!saved && step === 0 && (
+              <motion.div key="step0" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }} className="space-y-4">
+                <Field label="Product Name" required>
+                  <LuxInput value={form.name} onChange={e => update("name", e.target.value)} placeholder="e.g. Neon Slim Fit Shirt" />
                 </Field>
-                <Field label="Category *">
-                  <select
-                    value={form.category}
-                    onChange={(e) => update("category", e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-violet-500/40"
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Price (₹)" required>
+                    <LuxInput type="number" value={form.price} onChange={e => update("price", e.target.value)} placeholder="3499" min={0} />
+                  </Field>
+                  <Field label="Discount Price (₹)">
+                    <LuxInput type="number" value={form.discount_price} onChange={e => update("discount_price", e.target.value)} placeholder="2999" min={0} />
+                  </Field>
+                </div>
+                <Field label="Category" required>
+                  <LuxSelect value={form.category} onChange={e => update("category", e.target.value)}>
+                    <option value="">Select category…</option>
+                    {CATEGORIES.map(c => <option key={c} value={c} style={{ background: "var(--bg-surface)" }}>{c}</option>)}
+                  </LuxSelect>
+                </Field>
+                <Field label="Description">
+                  <LuxTextarea value={form.description} onChange={e => update("description", e.target.value)} rows={3} placeholder="Product details, materials, care instructions…" />
+                </Field>
+                <Field label="Tags (comma-separated)">
+                  <LuxInput value={form.tags} onChange={e => update("tags", e.target.value)} placeholder="summer, casual, cotton" />
+                </Field>
+                <div
+                  className="flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-all"
+                  style={{ background: "var(--bg-elevated)", borderColor: form.is_featured ? "var(--accent-gold)" : "var(--border)" }}
+                  onClick={() => update("is_featured", !form.is_featured)}
+                >
+                  <div
+                    className="w-4 h-4 rounded flex items-center justify-center border transition-all"
+                    style={{ background: form.is_featured ? "var(--accent-gold)" : "transparent", borderColor: form.is_featured ? "var(--accent-gold)" : "var(--border-strong)" }}
                   >
-                    <option value="" className="bg-[#0a0c18]">Select category…</option>
-                    {CATEGORIES.map((c) => <option key={c} value={c} className="bg-[#0a0c18]">{c}</option>)}
-                  </select>
-                </Field>
-              </div>
-              <Field label="Description">
-                <textarea
-                  value={form.description}
-                  onChange={(e) => update("description", e.target.value)}
-                  placeholder="Product details, materials, features..."
-                  rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500/40 resize-none"
-                />
-              </Field>
-              <Field label="Tags (comma-separated)">
-                <input
-                  value={form.tags}
-                  onChange={(e) => update("tags", e.target.value)}
-                  placeholder="e.g. summer, casual, cotton"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500/40"
-                />
-              </Field>
-            </>
-          )}
+                    {form.is_featured && <Check size={10} color="#060608" strokeWidth={3} />}
+                  </div>
+                  <Star size={14} style={{ color: form.is_featured ? "var(--accent-gold)" : "var(--text-muted)" }} />
+                  <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Mark as Featured Product</span>
+                </div>
+              </motion.div>
+            )}
 
-          {/* Step 1: Inventory */}
-          {!saved && step === 1 && (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-white">Size & Stock</p>
-                <button onClick={addSize} className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Add Size
-                </button>
-              </div>
-              <div className="space-y-3">
-                {form.sizes.map((s, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white/3 border border-white/5">
-                    <select
-                      value={s.size}
-                      onChange={(e) => updateSize(idx, "size", e.target.value)}
-                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 outline-none w-28"
+            {/* Step 1: Inventory */}
+            {!saved && step === 1 && (
+              <motion.div key="step1" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Size & Stock</p>
+                  <button
+                    onClick={addSize}
+                    className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 border transition-all"
+                    style={{ color: "var(--accent-gold)", borderColor: "rgba(var(--accent-gold-rgb), 0.3)", background: "rgba(var(--accent-gold-rgb), 0.08)" }}
+                  >
+                    <Plus size={12} /> Add Size
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {form.sizes.map((s, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-3 rounded-xl border p-3"
+                      style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
                     >
-                      {SIZE_OPTIONS.map((opt) => <option key={opt} value={opt} className="bg-[#0a0c18]">{opt}</option>)}
-                    </select>
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="text-xs text-slate-500">Stock:</span>
-                      <input
+                      <LuxSelect
+                        value={s.size}
+                        onChange={e => updateSize(idx, "size", e.target.value)}
+                        className="w-28 shrink-0"
+                        style={inputStyle}
+                      >
+                        {SIZE_OPTIONS.map(opt => <option key={opt} value={opt} style={{ background: "var(--bg-surface)" }}>{opt}</option>)}
+                      </LuxSelect>
+                      <span className="text-xs shrink-0" style={{ color: "var(--text-muted)" }}>Stock</span>
+                      <LuxInput
                         type="number"
                         min={0}
                         value={s.stock}
-                        onChange={(e) => updateSize(idx, "stock", Number(e.target.value))}
-                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-violet-500/40"
+                        onChange={e => updateSize(idx, "stock", Number(e.target.value))}
+                        className="flex-1"
                       />
-                    </div>
-                    <button
-                      onClick={() => removeSize(idx)}
-                      disabled={form.sizes.length === 1}
-                      className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors disabled:opacity-30"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-slate-500">
-                Total stock: {form.sizes.reduce((sum, s) => sum + Number(s.stock), 0)} units
-              </p>
-            </>
-          )}
-
-          {/* Step 2: Images */}
-          {!saved && step === 2 && (
-            <>
-              <p className="text-sm font-semibold text-white mb-2">Product Images</p>
-              <div className="flex gap-2">
-                <input
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addImage()}
-                  placeholder="Paste image URL..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500/40"
-                />
-                <button onClick={addImage} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
-                  Add URL
-                </button>
-              </div>
-              {form.images.length > 0 ? (
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  {form.images.map((img, idx) => (
-                    <div key={idx} className="relative group aspect-3/4 rounded-xl overflow-hidden bg-white/5 border border-white/10">
-                      <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = "")} />
                       <button
-                        onClick={() => removeImage(idx)}
-                        className="absolute top-2 right-2 p-1.5 bg-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeSize(idx)}
+                        disabled={form.sizes.length === 1}
+                        className="p-1.5 rounded-lg transition-colors disabled:opacity-30"
+                        style={{ color: "#f87171" }}
                       >
-                        <X className="w-3 h-3 text-white" />
+                        <Trash2 size={14} />
                       </button>
-                      {idx === 0 && (
-                        <span className="absolute bottom-2 left-2 text-[9px] font-bold text-white bg-violet-600 px-2 py-0.5 rounded-md">Primary</span>
-                      )}
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
-              ) : (
-                <div className="mt-3 border border-dashed border-white/10 rounded-xl p-8 text-center">
-                  <Upload className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                  <p className="text-xs text-slate-500">Add image URLs above to preview them here.</p>
-                </div>
-              )}
-            </>
-          )}
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Total stock: <strong style={{ color: "var(--text-primary)" }}>
+                    {form.sizes.reduce((s, e) => s + Number(e.stock), 0)} units
+                  </strong>
+                </p>
+              </motion.div>
+            )}
 
-          {/* Step 3: Review */}
-          {!saved && step === 3 && (
-            <>
-              <p className="text-sm font-semibold text-white mb-3">Review & Confirm</p>
-              <div className="space-y-3">
-                <ReviewRow label="Name" value={form.name} />
-                <ReviewRow label="Category" value={form.category} />
-                <ReviewRow label="Price" value={`₹${Number(form.price).toLocaleString()}`} />
-                <ReviewRow label="Sizes" value={form.sizes.map((s) => `${s.size}(${s.stock})`).join(", ")} />
-                <ReviewRow label="Images" value={`${form.images.length} image(s) added`} />
-                {form.tags && <ReviewRow label="Tags" value={form.tags} />}
-                {form.description && (
-                  <div className="p-3.5 rounded-xl bg-white/3 border border-white/5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Description</p>
-                    <p className="text-sm text-slate-300">{form.description}</p>
+            {/* Step 2: Images */}
+            {!saved && step === 2 && (
+              <motion.div key="step2" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }} className="space-y-4">
+                <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Product Images</p>
+
+                {/* Drop zone */}
+                <div
+                  className="relative rounded-2xl border-2 border-dashed p-6 text-center transition-all cursor-pointer"
+                  style={{
+                    borderColor: dragOver ? "var(--accent-gold)" : "var(--border-strong)",
+                    background: dragOver ? "rgba(var(--accent-gold-rgb), 0.05)" : "var(--bg-elevated)",
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
+                >
+                  <Upload size={28} className="mx-auto mb-2" style={{ color: dragOver ? "var(--accent-gold)" : "var(--text-muted)" }} />
+                  <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Drop images or <span style={{ color: "var(--accent-gold)" }}>click to browse</span>
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>JPG, PNG, WEBP — max 5MB each</p>
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={e => addFiles(e.target.files)} />
+                </div>
+
+                {/* URL input */}
+                <div className="flex gap-2">
+                  <LuxInput
+                    value={imageUrl}
+                    onChange={e => setImageUrl(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && addImageUrl()}
+                    placeholder="Or paste an image URL…"
+                    className="flex-1"
+                  />
+                  <button
+                    onClick={addImageUrl}
+                    className="px-4 rounded-xl text-sm font-bold shrink-0 transition-all"
+                    style={{ background: "var(--bg-elevated)", color: "var(--accent-gold)", border: "1px solid rgba(var(--accent-gold-rgb), 0.3)" }}
+                  >
+                    Add URL
+                  </button>
+                </div>
+
+                {/* Image grid */}
+                {images.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    <AnimatePresence>
+                      {images.map((img, idx) => (
+                        <motion.div
+                          key={img.url}
+                          initial={{ opacity: 0, scale: 0.85 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.85 }}
+                          className="relative group aspect-3/4 rounded-xl overflow-hidden border"
+                          style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
+                        >
+                          {img.url ? (
+                            <img src={img.url} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = "none"; }} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <ImageOff size={20} style={{ color: "var(--text-muted)" }} />
+                            </div>
+                          )}
+                          <button
+                            onClick={() => removeImage(idx)}
+                            className="absolute top-2 right-2 p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ background: "#ef4444" }}
+                          >
+                            <X size={11} color="white" />
+                          </button>
+                          {idx === 0 && (
+                            <span
+                              className="absolute bottom-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-md"
+                              style={{ background: "var(--accent-gold)", color: "#060608" }}
+                            >
+                              Primary
+                            </span>
+                          )}
+                          {img.file && (
+                            <span
+                              className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+                              style={{ background: "rgba(52,211,153,0.9)", color: "#060608" }}
+                            >
+                              NEW
+                            </span>
+                          )}
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>No images added yet</p>
                   </div>
                 )}
-              </div>
-            </>
-          )}
+              </motion.div>
+            )}
+
+            {/* Step 3: Review */}
+            {!saved && step === 3 && (
+              <motion.div key="step3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }} className="space-y-3">
+                <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Review & Publish</p>
+                {[
+                  ["Name", form.name],
+                  ["Category", form.category],
+                  ["Price", `₹${Number(form.price).toLocaleString("en-IN")}`],
+                  ["Sizes", form.sizes.map(s => `${s.size}(${s.stock})`).join(", ")],
+                  ["Images", `${images.length} image(s) · ${images.filter(i => i.file).length} new upload(s)`],
+                  ["Featured", form.is_featured ? "Yes" : "No"],
+                  ...(form.tags ? [["Tags", form.tags]] : []),
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex justify-between items-start rounded-xl border px-4 py-3"
+                    style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</span>
+                    <span className="text-sm font-semibold text-right max-w-[60%] wrap-break-word" style={{ color: "var(--text-primary)" }}>{value}</span>
+                  </div>
+                ))}
+                {form.description && (
+                  <div className="rounded-xl border px-4 py-3" style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>Description</p>
+                    <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{form.description}</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-5 border-t border-white/5 shrink-0">
+        <div className="flex items-center justify-between px-6 py-5 border-t shrink-0" style={{ borderColor: "var(--border)" }}>
           {saved ? (
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex gap-2">
               {!isEdit && (
                 <button
-                  onClick={() => {
-                    setSaved(false);
-                    setStep(0);
-                    setImageUrl("");
-                    setForm(createFormState());
-                  }}
-                  className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl text-sm text-slate-300 hover:text-white transition-colors"
+                  onClick={handleReset}
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all"
+                  style={{ background: "var(--bg-elevated)", borderColor: "var(--border)", color: "var(--text-secondary)" }}
                 >
                   Add Another
                 </button>
               )}
               <button
                 onClick={onClose}
-                className="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
+                style={{ background: "linear-gradient(135deg, var(--accent-gold), var(--accent-rose))", color: "#060608" }}
               >
                 Done
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setStep((p) => p - 1)}
-              disabled={step === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/5 rounded-xl text-sm text-slate-400 hover:text-white transition-colors disabled:opacity-30"
-            >
-              <ChevronLeft className="w-4 h-4" /> Back
-            </button>
+            <>
+              <button
+                onClick={() => setStep(p => p - 1)}
+                disabled={step === 0}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all disabled:opacity-30"
+                style={{ background: "var(--bg-elevated)", borderColor: "var(--border)", color: "var(--text-secondary)" }}
+              >
+                <ChevronLeft size={15} /> Back
+              </button>
+              {step < STEPS.length - 1 ? (
+                <button
+                  onClick={() => setStep(p => p + 1)}
+                  disabled={!canNext()}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg, var(--accent-gold), var(--accent-rose))", color: "#060608" }}
+                >
+                  Next <ChevronRight size={15} />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg, var(--accent-gold), var(--accent-rose))", color: "#060608" }}
+                >
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                  {isEdit ? "Save Changes" : "Create Product"}
+                </button>
+              )}
+            </>
           )}
-
-          {!saved && (step < STEPS.length - 1 ? (
-            <button
-              onClick={() => setStep((p) => p + 1)}
-              disabled={!canNext()}
-              className="flex items-center gap-2 px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40"
-            >
-              Next <ChevronRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              {isEdit ? "Save Changes" : "Create Product"}
-            </button>
-          ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function ReviewRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between items-start p-3.5 rounded-xl bg-white/3 border border-white/5">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</span>
-      <span className="text-sm text-white font-medium text-right max-w-[60%]">{value}</span>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

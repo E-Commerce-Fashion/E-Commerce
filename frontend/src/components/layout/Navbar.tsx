@@ -129,10 +129,10 @@ function NavbarInner() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] as const }}
           className={`w-full transition-all duration-500 ${scrolled
-              ? scrolledShellClass
-              : isDarkTheme
-                ? 'bg-transparent'
-                : 'bg-[rgba(255,255,255,0.78)] backdrop-blur-xl border-b border-slate-900/8'
+            ? scrolledShellClass
+            : isDarkTheme
+              ? 'bg-transparent'
+              : 'bg-[rgba(255,255,255,0.78)] backdrop-blur-xl border-b border-slate-900/8'
             }`}
         >
           {/* 3-zone: [Logo] ── [Nav centered] ── [Actions] */}

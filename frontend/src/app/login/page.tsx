@@ -2,202 +2,384 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { ArrowRight, Eye, EyeOff, Loader2, ShieldCheck, Sparkles, Truck } from 'lucide-react'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
+import { ArrowRight, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react'
 import { useUserStore } from '@/store/userStore'
 import { toast } from 'react-hot-toast'
 import api from '@/lib/axios'
 import axios from 'axios'
+import { signIn } from 'next-auth/react'
+
+/* ─── Animation Variants ─────────────────────────────────────── */
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      delay: i * 0.08,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+    },
+  }),
+}
+
+const stagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } },
+}
+
+/* ─── Google SVG Icon ─────────────────────────────────────────── */
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  )
+}
 
 export default function LoginPage() {
   const router = useRouter()
   const setUser = useUserStore((s) => s.setUser)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({ email: '', password: '' })
+  const [focused, setFocused] = useState<string | null>(null)
 
-  const handleForgot = () => {
-    toast('Password reset flow can be added next.')
-  }
+  const handleForgot = () => toast('Password reset coming soon.')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.email || !form.password) { toast.error('All fields required'); return }
-
     setLoading(true)
     try {
-      const payload = {
+      const { data } = await api.post('/auth/login', {
         email: form.email.trim().toLowerCase(),
         password: form.password,
-      }
-      const { data } = await api.post('/auth/login', payload)
+      })
       if (data.success) {
-        const loggedInUser = data.data.user
-        setUser(loggedInUser)
+        setUser(data.data.user)
         toast.success('Welcome back!')
-        router.replace(loggedInUser.role === 'admin' ? '/profile' : '/')
+        router.replace(data.data.user.role === 'admin' ? '/profile' : '/')
       }
     } catch (err: unknown) {
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'Login failed'
-        : 'Login failed'
-      toast.error(message)
+      const msg = axios.isAxiosError(err) ? err.response?.data?.message || 'Login failed' : 'Login failed'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
   }
 
-  const reveal = {
-    hidden: { opacity: 0, y: 18 },
-    show: { opacity: 1, y: 0 },
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true)
+    try {
+      await signIn('google', { callbackUrl: '/' })
+    } catch {
+      toast.error('Google sign-in failed. Please try again.')
+      setGoogleLoading(false)
+    }
   }
 
   return (
-    <main className="auth-centered-page auth-shell relative overflow-hidden bg-[#070a18] px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-14%] left-[-8%] h-136 w-136 rounded-full bg-violet-700/12 blur-[120px]" />
-        <div className="absolute bottom-[-18%] right-[-12%] h-136 w-136 rounded-full bg-cyan-500/10 blur-[130px]" />
+    <main
+      className="min-h-screen w-full flex items-center justify-center relative overflow-hidden px-4 py-12"
+      style={{ background: 'var(--bg-base)' }}
+    >
+      {/* ── Ambient Background Blobs ────────────────────────────── */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <motion.div
+          animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+          className="absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full opacity-20"
+          style={{ background: 'radial-gradient(circle, rgba(var(--accent-gold-rgb), 0.5), transparent 70%)' }}
+        />
+        <motion.div
+          animate={{ x: [0, -25, 0], y: [0, 30, 0] }}
+          transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
+          className="absolute -bottom-40 -right-20 h-[600px] w-[600px] rounded-full opacity-15"
+          style={{ background: 'radial-gradient(circle, rgba(var(--accent-rose-rgb), 0.5), transparent 70%)' }}
+        />
+        {/* Subtle grid */}
         <div
-          className="absolute inset-0 opacity-[0.12]"
+          className="absolute inset-0 opacity-[0.04]"
           style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
-            backgroundSize: '42px 42px',
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
           }}
         />
       </div>
 
-      <motion.section
-        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+      {/* ── Main Card ────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 32, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] as const }}
-        className="relative z-10 mx-auto grid w-full max-w-6xl overflow-hidden rounded-4xl border border-white/12 bg-[#0a0d1d]/80 shadow-[0_34px_80px_rgba(0,0,0,0.5)] backdrop-blur-2xl md:grid-cols-[1.05fr_0.95fr]"
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 w-full max-w-[1040px] overflow-hidden rounded-3xl border"
+        style={{
+          background: 'var(--bg-surface)',
+          borderColor: 'var(--border)',
+          boxShadow: 'var(--shadow-lg)',
+        }}
       >
-        <motion.div
-          variants={reveal}
-          initial="hidden"
-          animate="show"
-          transition={{ duration: 0.45, delay: 0.08 }}
-          className="relative border-b border-white/10 bg-[#0b1026]/80 px-6 py-8 sm:px-8 sm:py-10 md:border-b-0 md:border-r md:px-10 md:py-12"
-        >
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -left-8 top-0 h-52 w-52 rounded-full bg-violet-600/18 blur-[90px]" />
-            <div className="absolute right-0 bottom-0 h-44 w-44 rounded-full bg-cyan-500/14 blur-[86px]" />
-          </div>
+        <div className="grid md:grid-cols-[1fr_1.1fr]">
 
-          <div className="relative">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/16 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-200/90">
-              <Sparkles size={12} className="text-violet-300" />
-              Member Access
-            </p>
-            <h2 className="mt-5 text-4xl sm:text-5xl font-bold leading-[0.95] text-white">
-              Welcome
-              <br />
-              Back
-            </h2>
-            <p className="mt-4 max-w-md text-sm sm:text-base leading-7 text-slate-300/85">
-              Enter your credentials to continue your style journey and access your curated profile, orders, and wishlist.
-            </p>
-
-            <div className="mt-8 space-y-3">
-              {[{ icon: ShieldCheck, text: 'Secure account-protected checkout' }, { icon: Truck, text: 'Fast order tracking and dispatch updates' }].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3 border border-white/10 bg-white/5 px-3 py-3">
-                  <span className="inline-flex h-8 w-8 items-center justify-center bg-violet-500/18 text-violet-200">
-                    <Icon size={15} />
-                  </span>
-                  <p className="text-sm text-slate-200/90">{text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          variants={reveal}
-          initial="hidden"
-          animate="show"
-          transition={{ duration: 0.45, delay: 0.14 }}
-          className="px-6 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12"
-        >
-          <div className="mb-7 sm:mb-8">
-            <h1 className="text-4xl sm:text-5xl leading-none font-bold text-white">Sign In</h1>
-            <p className="mt-3 text-sm text-slate-400">
-              Not a member?{' '}
-              <Link href="/register" className="text-slate-200 hover:text-violet-300 transition-colors">
-                Create Account
-              </Link>
-            </p>
-          </div>
-
-          <motion.form
-            onSubmit={handleSubmit}
+          {/* ── Left: Branding Panel ──────────────────────────────── */}
+          <motion.div
+            variants={stagger}
             initial="hidden"
             animate="show"
-            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } } }}
-            className="space-y-6"
+            className="relative hidden md:flex flex-col justify-between overflow-hidden p-10 lg:p-14"
+            style={{ background: 'var(--bg-elevated)' }}
           >
-            <motion.div variants={reveal} className="space-y-2">
-              <label className="block text-[11px] uppercase tracking-[0.16em] text-slate-400 font-semibold">Email Address</label>
-              <input
-                type="email"
-                required
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="auth-input w-full border border-white/18 bg-white/5 px-4 py-3.5 text-white outline-none transition-all placeholder:text-slate-500 focus:border-violet-400 focus:bg-white/7"
-                placeholder="you@example.com"
+            {/* Image backdrop */}
+            <div className="absolute inset-0">
+              <Image
+                src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=1200&auto=format&fit=crop"
+                alt="Fashion backdrop"
+                fill
+                className="object-cover object-center opacity-20"
+                sizes="50vw"
               />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, var(--bg-elevated) 0%, transparent 40%, var(--bg-elevated) 100%)' }} />
+            </div>
+
+            <div className="relative z-10">
+              <motion.div variants={fadeUp} custom={0}>
+                <span className="luxury-label flex items-center gap-2">
+                  <Sparkles size={12} style={{ color: 'var(--accent-gold)' }} />
+                  Member Access
+                </span>
+              </motion.div>
+
+              <motion.h2 variants={fadeUp} custom={1} className="mt-6 text-5xl lg:text-6xl luxury-heading">
+                Welcome<br />
+                <span className="italic font-light" style={{ color: 'var(--accent-gold)' }}>Back.</span>
+              </motion.h2>
+
+              <motion.p variants={fadeUp} custom={2} className="mt-5 max-w-sm luxury-body text-sm">
+                Continue your style journey. Access your curated profile, order history, and wishlist.
+              </motion.p>
+            </div>
+
+            {/* Feature chips */}
+            <motion.div variants={stagger} className="relative z-10 mt-10 space-y-3">
+              {[
+                'Secure, encrypted checkout',
+                'Real-time order tracking',
+                'Exclusive member drops',
+              ].map((text, i) => (
+                <motion.div
+                  key={text}
+                  variants={fadeUp}
+                  custom={i + 3}
+                  className="flex items-center gap-3 rounded-xl border px-4 py-3"
+                  style={{ background: 'var(--glass-bg)', borderColor: 'rgba(var(--accent-gold-rgb), 0.18)', backdropFilter: 'blur(12px)' }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full shrink-0"
+                    style={{ background: 'var(--accent-gold)' }}
+                  />
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{text}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.div>
+
+          {/* ── Right: Form Panel ─────────────────────────────────── */}
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+            className="flex flex-col justify-center px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14"
+            style={{ background: 'var(--bg-surface)' }}
+          >
+            {/* Header */}
+            <motion.div variants={fadeUp} custom={0} className="mb-8">
+              <h1 className="text-4xl sm:text-5xl luxury-heading">Sign In</h1>
+              <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>
+                New here?{' '}
+                <Link
+                  href="/register"
+                  className="font-semibold transition-colors"
+                  style={{ color: 'var(--accent-gold)' }}
+                >
+                  Create an account →
+                </Link>
+              </p>
             </motion.div>
 
-            <motion.div variants={reveal} className="space-y-2 relative">
-              <div className="flex items-center justify-between">
-                <label className="block text-[11px] uppercase tracking-[0.16em] text-slate-400 font-semibold">Password</label>
-                <button type="button" onClick={handleForgot} className="text-[10px] uppercase tracking-[0.16em] text-slate-300 hover:text-violet-300 transition-colors font-semibold">
-                  Forgot?
-                </button>
-              </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="auth-input w-full border border-white/18 bg-white/5 px-4 py-3.5 pr-11 text-white outline-none transition-all placeholder:text-slate-500 focus:border-violet-400 focus:bg-white/7"
-                placeholder="Enter your password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 bottom-3.5 text-slate-500 hover:text-white transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </motion.div>
-
-            <motion.div variants={reveal} className="pt-2">
+            {/* Google Sign-In */}
+            <motion.div variants={fadeUp} custom={1} className="mb-6">
               <motion.button
-                type="submit"
-                disabled={loading}
-                whileHover={{ scale: 1.01, y: -1 }}
-                whileTap={{ scale: 0.99 }}
-                className="w-full bg-linear-to-r from-violet-600 via-violet-500 to-indigo-500 px-6 py-3.5 text-lg text-white shadow-[0_16px_34px_rgba(99,70,235,0.45)] transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center justify-center gap-3 rounded-xl border py-3.5 text-sm font-semibold transition-all duration-300 disabled:opacity-60"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  borderColor: 'var(--border-strong)',
+                  color: 'var(--text-primary)',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
               >
-                {loading ? (
-                  <Loader2 className="animate-spin w-5 h-5" />
+                {googleLoading ? (
+                  <Loader2 className="animate-spin" size={18} />
                 ) : (
-                  <>
-                    Log In
-                    <ArrowRight size={17} />
-                  </>
+                  <GoogleIcon />
                 )}
+                <span>Continue with Google</span>
               </motion.button>
             </motion.div>
 
-            <motion.p variants={reveal} className="pt-1 text-xs leading-6 text-slate-400/90">
-              By continuing, you agree to the platform security and account usage guidelines.
-            </motion.p>
-          </motion.form>
-        </motion.div>
-      </motion.section>
+            {/* Divider */}
+            <motion.div variants={fadeUp} custom={2} className="mb-6 flex items-center gap-4">
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+              <span className="text-[11px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>
+                or
+              </span>
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            </motion.div>
+
+            {/* Form */}
+            <motion.form
+              onSubmit={handleSubmit}
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+              className="space-y-5"
+            >
+              {/* Email */}
+              <motion.div variants={fadeUp} custom={0}>
+                <label
+                  className="luxury-label mb-2 block"
+                  htmlFor="email"
+                >
+                  Email Address
+                </label>
+                <div
+                  className="relative overflow-hidden rounded-xl border transition-all duration-300"
+                  style={{
+                    borderColor: focused === 'email' ? 'var(--accent-gold)' : 'var(--border)',
+                    boxShadow: focused === 'email' ? `0 0 0 3px rgba(var(--accent-gold-rgb), 0.12)` : 'none',
+                    background: 'var(--bg-elevated)',
+                  }}
+                >
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onFocus={() => setFocused('email')}
+                    onBlur={() => setFocused(null)}
+                    className="w-full bg-transparent px-4 py-4 text-sm outline-none placeholder:opacity-40"
+                    style={{ color: 'var(--text-primary)' }}
+                    placeholder="you@example.com"
+                  />
+                </div>
+              </motion.div>
+
+              {/* Password */}
+              <motion.div variants={fadeUp} custom={1}>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="luxury-label" htmlFor="password">Password</label>
+                  <button
+                    type="button"
+                    onClick={handleForgot}
+                    className="text-[10px] uppercase tracking-widest font-semibold transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    Forgot?
+                  </button>
+                </div>
+                <div
+                  className="relative overflow-hidden rounded-xl border transition-all duration-300"
+                  style={{
+                    borderColor: focused === 'password' ? 'var(--accent-gold)' : 'var(--border)',
+                    boxShadow: focused === 'password' ? `0 0 0 3px rgba(var(--accent-gold-rgb), 0.12)` : 'none',
+                    background: 'var(--bg-elevated)',
+                  }}
+                >
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    onFocus={() => setFocused('password')}
+                    onBlur={() => setFocused(null)}
+                    className="w-full bg-transparent px-4 py-4 pr-12 text-sm outline-none placeholder:opacity-40"
+                    style={{ color: 'var(--text-primary)' }}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={showPassword ? 'hide' : 'show'}
+                        initial={{ opacity: 0, rotate: -10 }}
+                        animate={{ opacity: 1, rotate: 0 }}
+                        exit={{ opacity: 0, rotate: 10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                      </motion.span>
+                    </AnimatePresence>
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* Submit */}
+              <motion.div variants={fadeUp} custom={2} className="pt-1">
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="relative w-full overflow-hidden rounded-xl py-4 text-sm font-bold uppercase tracking-widest text-black transition-all disabled:opacity-60"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--accent-gold), var(--accent-rose))',
+                    boxShadow: `0 10px 32px rgba(var(--accent-gold-rgb), 0.35)`,
+                  }}
+                >
+                  {/* Shine sweep */}
+                  <span className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                  <span className="relative flex items-center justify-center gap-2">
+                    {loading ? (
+                      <Loader2 className="animate-spin" size={18} />
+                    ) : (
+                      <>
+                        Sign In
+                        <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                      </>
+                    )}
+                  </span>
+                </motion.button>
+              </motion.div>
+
+              <motion.p variants={fadeUp} custom={3} className="pt-1 text-[11px] leading-6 text-center" style={{ color: 'var(--text-muted)' }}>
+                By signing in, you agree to our{' '}
+                <span className="underline underline-offset-2 cursor-pointer" style={{ color: 'var(--text-secondary)' }}>Terms of Service</span>
+                {' '}and{' '}
+                <span className="underline underline-offset-2 cursor-pointer" style={{ color: 'var(--text-secondary)' }}>Privacy Policy</span>.
+              </motion.p>
+            </motion.form>
+          </motion.div>
+        </div>
+      </motion.div>
     </main>
   )
 }

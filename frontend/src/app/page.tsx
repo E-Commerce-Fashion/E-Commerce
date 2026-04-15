@@ -294,7 +294,7 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <motion.div
             className="absolute -left-20 top-1 h-112 w-md rounded-none opacity-40"
-            style={{ 
+            style={{
               background: 'radial-gradient(circle, rgba(var(--accent-gold-rgb), 0.15), transparent 70%)',
               willChange: 'transform'
             }}
@@ -303,7 +303,7 @@ export default function HomePage() {
           />
           <motion.div
             className="absolute -right-28 top-20 h-136 w-136 rounded-none opacity-40"
-            style={{ 
+            style={{
               background: 'radial-gradient(circle, rgba(var(--accent-rose-rgb), 0.15), transparent 72%)',
               willChange: 'transform'
             }}
@@ -384,13 +384,8 @@ export default function HomePage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.55 }}
-                      className="mx-auto mt-5 max-w-[14ch] text-[clamp(2.6rem,9.8vw,6.4rem)] sm:text-6xl lg:text-7xl xl:text-[6.4rem] font-bold leading-[0.95]"
-                      style={{
-                        background: 'linear-gradient(92deg, rgb(255,99,132) 0%, rgb(255,255,255) 45%, rgb(99,255,170) 73%, rgb(111,166,255) 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        textShadow: '0 10px 35px rgba(0,0,0,0.22)',
-                      }}
+                      className="mx-auto mt-5 max-w-[15ch] text-[clamp(2.4rem,8.8vw,5.8rem)] sm:text-6xl lg:text-7xl font-serif font-bold leading-none hero-title-gradient"
+                      style={{ filter: 'drop-shadow(0 8px 28px rgba(0,0,0,0.3))' }}
                     >
                       {activeSlide.title}
                     </motion.h1>
@@ -530,13 +525,13 @@ export default function HomePage() {
                   className="home-fade-in-card rounded-2xl border px-4 py-5 sm:px-5"
                   style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)' }}
                 >
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--accent-gold)' }}>
+                  <p className="luxury-label">
                     Runway Note {index + 1}
                   </p>
-                  <h3 className="mt-2 text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  <h3 className="mt-3 text-xl font-serif font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
                     {note.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-7" style={{ color: 'var(--text-secondary)' }}>
+                  <p className="mt-2 luxury-body text-sm">
                     {note.desc}
                   </p>
                 </motion.article>
@@ -568,10 +563,8 @@ export default function HomePage() {
                 className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
               >
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: 'var(--accent-gold)' }}>
-                    Collection Preview
-                  </p>
-                  <h2 className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-bold font-serif" style={{ color: 'var(--text-primary)' }}>
+                  <p className="luxury-label">Collection Preview</p>
+                  <h2 className="mt-3 text-2xl sm:text-3xl lg:text-4xl luxury-heading">
                     Signature Looks Before The Spin
                   </h2>
                 </div>
@@ -589,45 +582,45 @@ export default function HomePage() {
 
               <div className="relative mt-7 -mx-3 px-3 sm:mx-0 sm:px-0">
                 <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-proximity sm:grid sm:grid-cols-2 xl:grid-cols-5 sm:overflow-visible sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {carouselItems.map((item, index) => (
-                  <motion.article
-                    key={`${item.title}-${index}`}
-                    initial={shouldReduceMotion || performanceMode ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    whileHover={shouldReduceMotion || performanceMode ? undefined : { y: -5, scale: 1.01 }}
-                    whileTap={shouldReduceMotion || performanceMode ? undefined : { scale: 0.99 }}
-                    viewport={{ once: true, amount: 0.25 }}
-                    transition={shouldReduceMotion || performanceMode ? { duration: 0.01 } : { duration: 0.42, delay: index * 0.05 }}
-                    className="group relative min-w-[84vw] max-w-[84vw] sm:min-w-0 sm:max-w-none shrink-0 snap-start overflow-hidden rounded-none border px-4 py-5 sm:px-5 sm:py-6 transition-all duration-300"
-                    style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)' }}
-                  >
-                    <div
-                      className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                      style={{ background: 'radial-gradient(circle at 15% 5%, rgba(var(--accent-gold-rgb),0.18), transparent 58%)' }}
-                    />
-
-                    <div className="pointer-events-none absolute bottom-0 left-0 h-0.5 w-0 transition-all duration-500 group-hover:w-full" style={{ background: 'var(--accent-gold)' }} />
-
-                    <p className="relative text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: 'var(--accent-gold)' }}>
-                      {item.category}
-                    </p>
-                    <h3 className="relative mt-3 text-xl font-serif font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
-                      {item.title}
-                    </h3>
-                    <p className="relative mt-3 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                      {item.price}
-                    </p>
-
-                    <Link
-                      href={item.link || '/products'}
-                      className="relative mt-6 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] transition-all group-hover:gap-3"
-                      style={{ color: 'var(--text-primary)' }}
+                  {carouselItems.map((item, index) => (
+                    <motion.article
+                      key={`${item.title}-${index}`}
+                      initial={shouldReduceMotion || performanceMode ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      whileHover={shouldReduceMotion || performanceMode ? undefined : { y: -5, scale: 1.01 }}
+                      whileTap={shouldReduceMotion || performanceMode ? undefined : { scale: 0.99 }}
+                      viewport={{ once: true, amount: 0.25 }}
+                      transition={shouldReduceMotion || performanceMode ? { duration: 0.01 } : { duration: 0.42, delay: index * 0.05 }}
+                      className="group relative min-w-[84vw] max-w-[84vw] sm:min-w-0 sm:max-w-none shrink-0 snap-start overflow-hidden rounded-none border px-4 py-5 sm:px-5 sm:py-6 transition-all duration-300"
+                      style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)' }}
                     >
-                      Browse
-                      <ArrowRight size={13} />
-                    </Link>
-                  </motion.article>
-                ))}
+                      <div
+                        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                        style={{ background: 'radial-gradient(circle at 15% 5%, rgba(var(--accent-gold-rgb),0.18), transparent 58%)' }}
+                      />
+
+                      <div className="pointer-events-none absolute bottom-0 left-0 h-0.5 w-0 transition-all duration-500 group-hover:w-full" style={{ background: 'var(--accent-gold)' }} />
+
+                      <p className="relative text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: 'var(--accent-gold)' }}>
+                        {item.category}
+                      </p>
+                      <h3 className="relative mt-3 text-xl font-serif font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
+                        {item.title}
+                      </h3>
+                      <p className="relative mt-3 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                        {item.price}
+                      </p>
+
+                      <Link
+                        href={item.link || '/products'}
+                        className="relative mt-6 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] transition-all group-hover:gap-3"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        Browse
+                        <ArrowRight size={13} />
+                      </Link>
+                    </motion.article>
+                  ))}
                 </div>
               </div>
             </motion.div>
@@ -670,8 +663,8 @@ export default function HomePage() {
               className="mb-7 flex items-end justify-between gap-4"
             >
               <div>
-                <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--accent-gold)' }}>Featured edit</p>
-                <h2 className="mt-2 text-3xl sm:text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                <p className="luxury-label">Featured edit</p>
+                <h2 className="mt-3 text-3xl sm:text-4xl luxury-heading">
                   Style Moodboards
                 </h2>
                 <motion.div
@@ -697,25 +690,26 @@ export default function HomePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={performanceMode ? { duration: 0.22, delay: index * 0.03 } : { duration: 0.45, delay: index * 0.08 }}
-                  whileHover={shouldReduceMotion || performanceMode ? undefined : { y: -6 }}
-                  className="home-lift-card premium-card-hover shine-effect group overflow-hidden rounded-2xl border transition-all duration-300"
+                  whileHover={shouldReduceMotion || performanceMode ? undefined : { y: -7, scale: 1.01 }}
+                  className="luxury-card img-luxury-overlay shine-effect group transition-all duration-500"
                   style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
                 >
-                  <div className="relative h-56 sm:h-64 overflow-hidden">
+                  <div className="relative h-60 sm:h-68 overflow-hidden">
                     <Image
                       src={board.image}
                       alt={board.title}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      className="object-cover transition-transform duration-700 group-hover:scale-108"
                     />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   </div>
-                  <div className="p-5">
-                    <h3 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{board.title}</h3>
-                    <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>{board.desc}</p>
-                    <Link href="/products" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold transition-all duration-300 group-hover:gap-2" style={{ color: 'var(--accent-gold)' }}>
+                  <div className="p-6">
+                    <h3 className="text-xl font-serif font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>{board.title}</h3>
+                    <p className="mt-2 luxury-body text-sm">{board.desc}</p>
+                    <Link href="/products" className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest transition-all duration-300 group-hover:gap-3" style={{ color: 'var(--accent-gold)' }}>
                       Shop this vibe
-                      <ArrowRight size={14} />
+                      <ArrowRight size={13} />
                     </Link>
                   </div>
                 </motion.article>
@@ -733,14 +727,13 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.45, delay: index * 0.08 }}
-                className="home-lift-card home-lift-card-soft premium-card-hover animated-border group rounded-none border p-4 sm:p-5 transition-all duration-300"
-                style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+                className="luxury-card animated-border glass-gold group p-5 sm:p-6 transition-all duration-500"
               >
-                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-none" style={{ background: 'rgba(var(--accent-gold-rgb),0.12)', color: 'var(--accent-gold)' }}>
-                  <Icon size={18} />
+                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: 'rgba(var(--accent-gold-rgb),0.14)', color: 'var(--accent-gold)' }}>
+                  <Icon size={20} />
                 </div>
-                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</p>
-                <p className="mt-1 text-xs sm:text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
+                <p className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-primary)' }}>{title}</p>
+                <p className="mt-1.5 luxury-body text-xs sm:text-sm">{desc}</p>
               </motion.div>
             ))}
           </div>
@@ -757,8 +750,8 @@ export default function HomePage() {
                 transition={performanceMode ? { duration: 0.24 } : { duration: 0.5 }}
                 className="mb-8"
               >
-                <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--accent-gold)' }}>Customer Voices</p>
-                <h2 className="mt-2 text-3xl sm:text-4xl font-bold font-serif" style={{ color: 'var(--text-primary)' }}>Recent Accolades</h2>
+                <p className="luxury-label">Customer Voices</p>
+                <h2 className="mt-3 text-3xl sm:text-4xl luxury-heading">Recent Accolades</h2>
                 <motion.div
                   initial={{ width: 0, opacity: 0 }}
                   whileInView={{ width: 92, opacity: 1 }}

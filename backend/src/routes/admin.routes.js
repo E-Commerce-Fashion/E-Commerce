@@ -7,6 +7,12 @@ import {
   getAllUsers,
   updateUserRole,
 } from '../controllers/adminController.js';
+import {
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from '../controllers/productController.js';
+import { uploadProductImages } from '../config/cloudinary.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { requireAdmin } from '../middleware/admin.middleware.js';
 
@@ -17,6 +23,9 @@ router.use(protect, requireAdmin);
 
 router.get('/dashboard', getDashboardStats);
 router.get('/products', getAdminProducts);
+router.post('/products', uploadProductImages, createProduct);
+router.put('/products/:id', uploadProductImages, updateProduct);
+router.delete('/products/:id', deleteProduct);
 router.get('/orders', getAllOrders);
 router.put('/orders/:id/status', updateOrderStatus);
 router.get('/users', getAllUsers);

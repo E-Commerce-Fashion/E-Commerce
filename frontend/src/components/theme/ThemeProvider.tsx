@@ -8,6 +8,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       attribute="data-theme"
       defaultTheme="dark"
       enableSystem={true}
+      disableTransitionOnChange
       themes={['light', 'dark']}
       storageKey="fashionforge-theme"
     >

@@ -19,12 +19,16 @@ const navItems = [
 export function MobileBottomNav() {
   const pathname = usePathname()
   const [visible, setVisible]   = useState(true)
+  const [mounted, setMounted]   = useState(false)
   const lastScrollY              = useRef(0)
 
   const totalItems = useCartStore((s) => s.totalItems)
   const toggleCart = useCartStore((s) => s.toggleCart)
   const cartCount  = totalItems()
   const { isAuthenticated: authed } = useUserStore()
+
+  // Only show cart badge after hydration to avoid SSR/client mismatch
+  useEffect(() => { setMounted(true) }, [])
 
   // Hide-on-scroll-down / show-on-scroll-up
   useEffect(() => {
@@ -76,7 +80,7 @@ export function MobileBottomNav() {
                 <span className="mobile-bottom-nav__icon">
                   <item.icon size={20} strokeWidth={active ? 2.5 : 1.8} />
                   <AnimatePresence>
-                    {cartCount > 0 && (
+                    {mounted && cartCount > 0 && (
                       <motion.span
                         key="badge"
                         initial={{ scale: 0 }}
