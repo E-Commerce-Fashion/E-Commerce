@@ -319,16 +319,7 @@ export default function HomePage() {
             transition={{ duration: 0.7 }}
             className="relative w-full min-h-screen overflow-hidden"
           >
-            <div className="absolute inset-x-0 top-16 z-20 overflow-hidden py-2 border-b border-white/5" style={{ background: 'rgba(8,10,15,0.75)', backdropFilter: 'blur(12px)' }}>
-              <div className="marquee-track flex w-max">
-                {[...promoItems, ...promoItems, ...promoItems, ...promoItems].map((item, index) => (
-                  <span key={`${item}-${index}`} className="shrink-0 mr-8 flex items-center gap-3 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'rgba(244,240,232,0.92)' }}>
-                    <Sparkles size={11} style={{ color: 'var(--accent-gold)' }} />
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
+
 
             <div className="relative min-h-screen">
               <AnimatePresence mode="wait">

@@ -120,10 +120,33 @@ function NavbarInner() {
     return base === '/' ? pathname === '/' : pathname.startsWith(base)
   }
 
+  const promoItems = ['Black Friday sale 50% off', 'Members get free express shipping', 'New outerwear drop is live']
+
   return (
     <>
       {/* ── Fixed Header ──────────────────────────────────────── */}
-      <header className="site-navbar fixed top-0 left-0 right-0 w-full z-50">
+      <header className="site-navbar fixed top-0 left-0 right-0 w-full z-[60] flex flex-col">
+        <AnimatePresence>
+          {pathname === '/' && !scrolled && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="w-full overflow-hidden border-b border-white/5 relative z-20"
+              style={{ background: 'rgba(8,10,15,1)' }}
+            >
+              <div className="marquee-track flex w-max py-2">
+                {[...promoItems, ...promoItems, ...promoItems, ...promoItems].map((item, index) => (
+                  <span key={`${item}-${index}`} className="shrink-0 mr-8 flex items-center gap-3 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'rgba(244,240,232,0.92)' }}>
+                    <Sparkles size={11} style={{ color: 'var(--accent-gold)' }} />
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.div
           initial={{ y: -64, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
