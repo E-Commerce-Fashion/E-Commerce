@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { Navbar } from '@/components/layout/Navbar'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { CartDrawer } from '@/components/cart/CartDrawer'
+import { AuthSync } from '@/components/auth/AuthSync'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
 
@@ -40,6 +41,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body suppressHydrationWarning>
         <ThemeProvider>
+          <AuthSync />
           <Navbar />
           <CartDrawer />
           <Toaster

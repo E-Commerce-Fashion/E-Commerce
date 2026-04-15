@@ -106,13 +106,17 @@ function NavbarInner() {
   }, [mobileOpen])
 
   const handleLogout = async () => {
-    try { await api.post('/auth/logout') } catch { /* silent */ }
-    finally {
-      clearUser()
-      setMobileOpen(false)
-      router.push('/')
-      router.refresh()
+    // 1. Clear client state immediately — UI updates at once
+    clearUser()
+    setMobileOpen(false)
+    // 2. Purge the Zustand persisted key from localStorage so hydration can't resurrect the session
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('fashionforge-user')
     }
+    // 3. Tell the backend to invalidate + clear HttpOnly cookies (fire-and-forget; UI already clean)
+    try { await api.post('/auth/logout') } catch { /* silent */ }
+    // 4. Hard navigation — tears down all React state, no stale component tree
+    window.location.href = '/'
   }
 
   const isActive = (href: string) => {

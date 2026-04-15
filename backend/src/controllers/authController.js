@@ -177,15 +177,22 @@ export const login = async (req, res) => {
 // ── LOGOUT ────────────────────────────────────────────────────────
 export const logout = async (req, res) => {
   try {
+    // Invalidate the Supabase session on the server side
     if (req.token) {
-      await supabase.auth.signOut();
+      await supabaseAdmin.auth.admin.signOut(req.user?.id).catch(() => {});
     }
-    res.clearCookie('access_token', { path: '/' });
-    res.clearCookie('refresh_token', { path: '/' });
+  } catch {
+    // Non-fatal — always clear cookies
+  } finally {
+    // Must pass the same options used when setting the cookies so browsers honour them
+    const clearOptions = {
+      ...COOKIE_OPTIONS,
+      maxAge: 0,
+      expires: new Date(0),
+    };
+    res.clearCookie('access_token', clearOptions);
+    res.clearCookie('refresh_token', clearOptions);
     return successResponse(res, {}, 'Logged out successfully');
-  } catch (err) {
-    logger.error('Logout error', { error: err.message });
-    return errorResponse(res, 'Logout failed', 500);
   }
 };
 
