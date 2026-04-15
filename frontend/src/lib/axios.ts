@@ -32,13 +32,13 @@ api.interceptors.response.use(
         await axios.post(`${BASE}/auth/refresh`, {}, { withCredentials: true })
         return api(originalRequest)
       } catch {
-        // Refresh failed — blow away all client-side auth state so the UI resets
+        // Refresh failed — clear client state so the UI shows "logged out"
+        // Do NOT redirect here: that causes infinite loops on public pages.
+        // Protected pages use their own auth guards to redirect to /login.
         if (typeof window !== 'undefined') {
           localStorage.removeItem('fashionforge-user')
-          // Dynamically import the store to avoid circular deps
           const { useUserStore } = await import('@/store/userStore')
           useUserStore.getState().clearUser()
-          window.location.href = '/login'
         }
       }
     }

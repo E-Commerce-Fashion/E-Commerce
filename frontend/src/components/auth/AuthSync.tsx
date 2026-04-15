@@ -2,18 +2,28 @@
 
 /**
  * AuthSync — mounts on every page (via layout.tsx).
- * On mount it hits /auth/me to verify the backend session is still alive.
- * If the backend returns 401/403 (e.g. token was cleared after logout),
- * it obliterates any stale Zustand + localStorage state so the UI resets.
+ * Only calls /auth/me when the Zustand store believes the user is logged in.
+ * This prevents needless 401→refresh→redirect loops for unauthenticated visitors.
+ * Skips entirely on auth pages (login/register) to avoid redirect loops.
  */
 import { useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/userStore'
 import api from '@/lib/axios'
 
+// Pages where we should never call /auth/me
+const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password']
+
 export function AuthSync() {
+  const pathname = usePathname()
   const { isAuthenticated, setUser, clearUser } = useUserStore()
 
   useEffect(() => {
+    // Never run on auth pages
+    if (AUTH_PAGES.some((p) => pathname.startsWith(p))) return
+    // Don't hit the network at all if we don't think we're logged in
+    if (!isAuthenticated) return
+
     const verify = async () => {
       try {
         const { data } = await api.get('/auth/me')
@@ -22,23 +32,19 @@ export function AuthSync() {
         }
       } catch (err: any) {
         const status = err?.response?.status
-        // 401 = no session, 403 = wrong role — either way clear all client state
         if (status === 401 || status === 403) {
           clearUser()
           if (typeof window !== 'undefined') {
             localStorage.removeItem('fashionforge-user')
           }
+          // Do NOT redirect — unauthenticated visitors can browse freely
         }
       }
     }
 
     verify()
-    // Re-verify whenever the window regains focus (tab switching, OS lock, etc.)
-    const onFocus = () => verify()
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [pathname, isAuthenticated])
 
   return null
 }
